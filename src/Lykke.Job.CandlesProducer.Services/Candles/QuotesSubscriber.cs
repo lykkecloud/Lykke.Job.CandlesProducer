@@ -98,15 +98,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             {
                 if (string.IsNullOrEmpty(quote.AssetPair))
                 {
-                    errors.Add(string.Format("Invalid 'AssetPair': '{0}'", quote.AssetPair ?? ""));
-                }
-                if (quote.Timestamp == DateTime.MinValue || quote.Timestamp == DateTime.MaxValue)
-                {
-                    errors.Add(string.Format("Invalid 'Timestamp' range: '{0}'", quote.Timestamp));
+                    errors.Add("Empty 'AssetPair'");
                 }
                 if (quote.Timestamp.Kind != DateTimeKind.Utc)
                 {
-                    errors.Add(string.Format("Invalid 'Timestamp' Kind (UTC is required): '{0}'", quote.Timestamp));
+                    errors.Add($"Invalid 'Timestamp' Kind (UTC is required): '{quote.Timestamp.Kind}'");
                 }
             }
 
