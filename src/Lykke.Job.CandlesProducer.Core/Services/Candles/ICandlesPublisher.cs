@@ -8,6 +8,6 @@ namespace Lykke.Job.CandlesProducer.Core.Services.Candles
 {
     public interface ICandlesPublisher : IStartable, IStopable
     {
-        Task PublishAsync(Candle candle);
+        Task PublishAsync(ICandle candle);
     }
 }

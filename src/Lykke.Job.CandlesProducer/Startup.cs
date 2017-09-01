@@ -6,6 +6,7 @@ using Common.Log;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Job.CandlesProducer.Core;
+using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;

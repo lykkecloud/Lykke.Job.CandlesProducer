@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Lykke.Job.CandlesProducer.Core.Services.Candles
+namespace Lykke.Job.CandlesProducer.Core.Services
 {
     public interface IStartupManager
     {

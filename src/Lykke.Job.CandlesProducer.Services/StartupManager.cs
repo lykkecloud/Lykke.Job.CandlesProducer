@@ -1,30 +1,33 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Common.Log;
+using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 
-namespace Lykke.Job.CandlesProducer.Services.Candles
+namespace Lykke.Job.CandlesProducer.Services
 {
     public class StartupManager : IStartupManager
     {
         private readonly IQuotesSubscriber _quotesSubscriber;
-        private readonly IMidPriceQuoteGeneratorSnapshotSerializer _midPriceQuoteGeneratorSnapshotSerializer;
+        private readonly IEnumerable<ISnapshotSerializer> _snapshotSerializers;
         private readonly ILog _log;
 
         public StartupManager(
             IQuotesSubscriber quotesSubscriber,
-            IMidPriceQuoteGeneratorSnapshotSerializer midPriceQuoteGeneratorSnapshotSerializer,
+            IEnumerable<ISnapshotSerializer> snapshotSerializers,
             ILog log)
         {
             _quotesSubscriber = quotesSubscriber;
-            _midPriceQuoteGeneratorSnapshotSerializer = midPriceQuoteGeneratorSnapshotSerializer;
+            _snapshotSerializers = snapshotSerializers;
             _log = log;
         }
 
         public  async Task StartAsync()
         {
-            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Deserializing mid price quote generator snapshot...");
+            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Deserializing snapshots...");
 
-            await _midPriceQuoteGeneratorSnapshotSerializer.DeserializeAsync();
+            await Task.WhenAll(_snapshotSerializers.Select(s => s.DeserializeAsync()));
 
             await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Starting quote subscriber...");
 

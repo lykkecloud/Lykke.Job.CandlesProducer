@@ -1,4 +1,3 @@
-﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -11,25 +10,25 @@ using Newtonsoft.Json;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories
 {
-    public class MidPriceQuoteGeneratorSnapshotRepository : ISnapshotRepository<IImmutableDictionary<string, IMarketState>>
+    public class CandlesGeneratorSnapshotRepository : ISnapshotRepository<IImmutableDictionary<string, ICandle>>
     {
-        private const string Container = "MidPriceQuoteGeneratorSnapshot";
+        private const string Container = "CandlesGeneratorSnapshot";
         private const string Key = "Singleton";
 
         private readonly IBlobStorage _storage;
 
-        public MidPriceQuoteGeneratorSnapshotRepository(IBlobStorage storage)
+        public CandlesGeneratorSnapshotRepository(IBlobStorage storage)
         {
             _storage = storage;
         }
 
-        public async Task SaveAsync(IImmutableDictionary<string, IMarketState> state)
+        public async Task SaveAsync(IImmutableDictionary<string, ICandle> state)
         {
             using (var stream = new MemoryStream())
             using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
             using (var jsonWriter = new JsonTextWriter(streamWriter))
             {
-                var model = state.ToDictionary(i => i.Key, i => MarketStateEntity.Create(i.Value));
+                var model = state.ToDictionary(i => i.Key, i => CandleEntity.Create(i.Value));
                 var serializer = new JsonSerializer();
 
                 serializer.Serialize(jsonWriter, model);
@@ -44,7 +43,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
             }
         }
 
-        public async Task<IImmutableDictionary<string, IMarketState>> TryGetAsync()
+        public async Task<IImmutableDictionary<string, ICandle>> TryGetAsync()
         {
             if (!await _storage.HasBlobAsync(Container, Key))
             {
@@ -60,9 +59,9 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 stream.Seek(0, SeekOrigin.Begin);
 
                 var serializer = new JsonSerializer();
-                var model = serializer.Deserialize<Dictionary<string, MarketStateEntity>>(jsonReader);
+                var model = serializer.Deserialize<ImmutableDictionary<string, CandleEntity>>(jsonReader);
 
-                return model.ToImmutableDictionary(i => i.Key, i => (IMarketState) i.Value);
+                return model.ToImmutableDictionary(i => i.Key, i => (ICandle) i.Value);
             }
         }
     }

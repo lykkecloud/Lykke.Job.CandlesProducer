@@ -1,11 +1,12 @@
+using System.Collections.Immutable;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 
 namespace Lykke.Job.CandlesProducer.Core.Services.Candles
 {
-    public interface ICandlesGenerator
+    public interface ICandlesGenerator : IHaveState<IImmutableDictionary<string, ICandle>>
     {
-        Candle GenerateCandle(IQuote quote, TimeInterval timeInterval, PriceType priceType);
+        CandleMergeResult Merge(IQuote quote, PriceType priceType, TimeInterval timeInterval);
     }
 }

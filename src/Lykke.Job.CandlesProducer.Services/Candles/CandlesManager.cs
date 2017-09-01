@@ -40,20 +40,24 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(quote, assetPair.Accuracy);
 
-                // TODO: Publish only changed candles
                 foreach (var timeInterval in Constants.PublishedIntervals)
                 {
-                    var candle = _candlesGenerator.GenerateCandle(quote, timeInterval, quote.IsBuy ? PriceType.Bid : PriceType.Ask);
-                    var tasks = new List<Task>
+                    var candleMergeResult = _candlesGenerator.Merge(quote, quote.IsBuy ? PriceType.Bid : PriceType.Ask, timeInterval);
+                    var tasks = new List<Task>();
+
+                    if (candleMergeResult.WasChanged)
                     {
-                        _publisher.PublishAsync(candle)
-                    };
-                    
+                        tasks.Add(_publisher.PublishAsync(candleMergeResult.Candle));
+                    }
+
                     if (midPriceQuote != null)
                     {
-                        var midPriceCandle = _candlesGenerator.GenerateCandle(midPriceQuote, timeInterval, PriceType.Mid);
+                        var midPriceCandleMergeResult = _candlesGenerator.Merge(midPriceQuote, PriceType.Mid, timeInterval);
 
-                        tasks.Add(_publisher.PublishAsync(midPriceCandle));
+                        if (midPriceCandleMergeResult.WasChanged)
+                        {
+                            tasks.Add(_publisher.PublishAsync(midPriceCandleMergeResult.Candle));
+                        }
                     }
 
                     await Task.WhenAll(tasks);

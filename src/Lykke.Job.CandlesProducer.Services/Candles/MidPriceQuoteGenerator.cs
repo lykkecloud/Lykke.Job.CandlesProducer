@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
@@ -35,55 +35,45 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
         }
 
-        private ConcurrentDictionary<string, MarketState> _assetMarketStates;
+        private Dictionary<string, MarketState> _assetMarketStates;
 
         public MidPriceQuoteGenerator()
         {
-            _assetMarketStates = new ConcurrentDictionary<string, MarketState>();
+            _assetMarketStates = new Dictionary<string, MarketState>();
         }
 
-        public IEnumerable<KeyValuePair<string, IMarketState>> GetState()
+        public IImmutableDictionary<string, IMarketState> GetState()
         {
-            return _assetMarketStates
-                .ToArray()
-                .Select(i => KeyValuePair.Create<string, IMarketState>(i.Key, i.Value));
+            return _assetMarketStates.ToImmutableDictionary(i => i.Key, i => (IMarketState)i.Value);
         }
 
-        public void SetState(IEnumerable<KeyValuePair<string, IMarketState>> state)
+        public void SetState(IImmutableDictionary<string, IMarketState> state)
         {
             if (_assetMarketStates.Count > 0)
             {
                 throw new InvalidOperationException("State already not empty");
             }
 
-            _assetMarketStates = new ConcurrentDictionary<string, MarketState>(state
-                .Select(i => KeyValuePair.Create(
-                    i.Key,
-                    new MarketState(i.Value.Ask, i.Value.Bid))));
+            _assetMarketStates = state.ToDictionary(i => i.Key, i => new MarketState(i.Value.Ask, i.Value.Bid));
         }
 
         public IQuote TryGenerate(IQuote quote, int assetPairAccuracy)
         {
             var assetPairId = quote.AssetPair.Trim().ToUpper();
-            var state = _assetMarketStates.AddOrUpdate(
-                assetPairId,
-                k => AddNewAssetState(new PriceState(quote.Price, quote.Timestamp), quote.IsBuy),
-                (k, oldState) => UpdateAssetState(oldState, new PriceState(quote.Price, quote.Timestamp), quote.IsBuy));
 
-            return TryCreateMidQuote(assetPairId, state, assetPairAccuracy);
+            _assetMarketStates.TryGetValue(assetPairId, out MarketState oldState);
+
+            var newPriceState = new PriceState(quote.Price, quote.Timestamp);
+            var newState = quote.IsBuy
+                ? new MarketState(oldState?.Ask, newPriceState)
+                : new MarketState(newPriceState, oldState?.Bid);
+
+            _assetMarketStates[assetPairId] = newState;
+            
+            return TryCreateMidQuote(assetPairId, newState, assetPairAccuracy);
         }
 
-        private static MarketState AddNewAssetState(PriceState priceState, bool isBid)
-        {
-            return isBid ? new MarketState(null, priceState) : new MarketState(priceState, null);
-        }
-
-        private static MarketState UpdateAssetState(MarketState oldState, PriceState priceState, bool isBid)
-        {
-            return isBid ? new MarketState(oldState.Ask, priceState) : new MarketState(priceState, oldState.Bid);
-        }
-
-        private static IQuote TryCreateMidQuote(string assetPairId, MarketState marketState, int assetPairAccuracy)
+        private static IQuote TryCreateMidQuote(string assetPairId, IMarketState marketState, int assetPairAccuracy)
         {
             if (marketState.Bid != null && marketState.Ask != null)
             {

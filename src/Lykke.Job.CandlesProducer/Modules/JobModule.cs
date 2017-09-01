@@ -1,10 +1,12 @@
-﻿using Autofac;
+﻿using System.Collections.Immutable;
+using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage;
 using AzureStorage.Blob;
 using Common.Log;
 using Lykke.Job.CandlesProducer.AzureRepositories;
 using Lykke.Job.CandlesProducer.Core;
+using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
@@ -84,21 +86,33 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()
+                .As<IHaveState<IImmutableDictionary<string, IMarketState>>>()
                 .SingleInstance();
 
             builder.RegisterType<CandlesGenerator>()
-                .As<ICandlesGenerator>();
+                .As<ICandlesGenerator>()
+                .As<IHaveState<IImmutableDictionary<string, ICandle>>>()
+                .SingleInstance();
 
             builder.RegisterType<CandlesManager>()
                 .As<ICandlesManager>();
 
             builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
-                .As<IMidPriceQuoteGeneratorSnapshotRepository>()
+                .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
                 .WithParameter(TypedParameter.From<IBlobStorage>(
                     new AzureBlobStorage(_settings.CandlesProducerJob.Db.SnapshotsConnectionString)));
 
-            builder.RegisterType<MidPriceQuoteGeneratorSnapshotSerializer>()
-                .As<IMidPriceQuoteGeneratorSnapshotSerializer>();
+            builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
+                .As<ISnapshotSerializer>();
+
+            builder.RegisterType<CandlesGeneratorSnapshotRepository>()
+                .As<ISnapshotRepository<IImmutableDictionary<string, ICandle>>>()
+                .WithParameter(TypedParameter.From<IBlobStorage>(
+                    new AzureBlobStorage(_settings.CandlesProducerJob.Db.SnapshotsConnectionString)));
+
+            builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, ICandle>>>()
+                .As<ISnapshotSerializer>()
+                .PreserveExistingDefaults();
         }
     }
 }
