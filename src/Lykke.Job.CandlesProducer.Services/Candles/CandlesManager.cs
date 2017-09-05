@@ -29,43 +29,36 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public async Task ProcessQuoteAsync(IQuote quote)
         {
-            try
+            var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(quote.AssetPair);
+
+            if (assetPair == null)
             {
-                var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(quote.AssetPair);
-
-                if (assetPair == null)
-                {
-                    return;
-                }
-
-                var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(quote, assetPair.Accuracy);
-
-                foreach (var timeInterval in Constants.PublishedIntervals)
-                {
-                    var candleMergeResult = _candlesGenerator.Merge(quote, quote.IsBuy ? PriceType.Bid : PriceType.Ask, timeInterval);
-                    var tasks = new List<Task>();
-
-                    if (candleMergeResult.WasChanged)
-                    {
-                        tasks.Add(_publisher.PublishAsync(candleMergeResult.Candle));
-                    }
-
-                    if (midPriceQuote != null)
-                    {
-                        var midPriceCandleMergeResult = _candlesGenerator.Merge(midPriceQuote, PriceType.Mid, timeInterval);
-
-                        if (midPriceCandleMergeResult.WasChanged)
-                        {
-                            tasks.Add(_publisher.PublishAsync(midPriceCandleMergeResult.Candle));
-                        }
-                    }
-
-                    await Task.WhenAll(tasks);
-                }
+                return;
             }
-            catch (Exception ex)
+
+            var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(quote, assetPair.Accuracy);
+
+            foreach (var timeInterval in Constants.PublishedIntervals)
             {
-                throw new InvalidOperationException($"Failed to process quote: {quote.ToJson()}", ex);
+                var candleMergeResult = _candlesGenerator.Merge(quote, quote.IsBuy ? PriceType.Bid : PriceType.Ask, timeInterval);
+                var tasks = new List<Task>();
+
+                if (candleMergeResult.WasChanged)
+                {
+                    tasks.Add(_publisher.PublishAsync(candleMergeResult.Candle));
+                }
+
+                if (midPriceQuote != null)
+                {
+                    var midPriceCandleMergeResult = _candlesGenerator.Merge(midPriceQuote, PriceType.Mid, timeInterval);
+
+                    if (midPriceCandleMergeResult.WasChanged)
+                    {
+                        tasks.Add(_publisher.PublishAsync(midPriceCandleMergeResult.Candle));
+                    }
+                }
+
+                await Task.WhenAll(tasks);
             }
         }
     }

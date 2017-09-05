@@ -79,9 +79,7 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
-                .As<IStartable>()
                 .SingleInstance()
-                .AutoActivate()
                 .WithParameter(TypedParameter.From(_settings.CandlesProducerJob.CandlesPublication));
 
             builder.RegisterType<MidPriceQuoteGenerator>()

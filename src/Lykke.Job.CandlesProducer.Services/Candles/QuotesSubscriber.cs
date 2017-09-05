@@ -82,7 +82,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), null, ex);
+                await _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), $"Failed to process quote: {quote.ToJson()}", ex);
             }
         }
 
@@ -111,7 +111,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Dispose()
         {
-            Stop();
+            _subscriber.Dispose();
         }
     }
 }
