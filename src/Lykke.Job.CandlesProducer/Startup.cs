@@ -6,6 +6,7 @@ using Common.Log;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Job.CandlesProducer.Core;
+using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Models;
@@ -58,9 +59,13 @@ namespace Lykke.Job.CandlesProducer
             var appSettings = Environment.IsDevelopment()
                 ? Configuration.Get<AppSettings>()
                 : HttpSettingsLoader.Load<AppSettings>(Configuration.GetValue<string>("SettingsUrl"));
-            var log = CreateLogWithSlack(services, appSettings);
 
-            builder.RegisterModule(new JobModule(appSettings, log));
+            var jobSettings = appSettings.CandlesProducerJob ?? appSettings.MtCandlesProducerJob;
+            var quotesSourceType = appSettings.CandlesProducerJob != null ? QuotesSourceType.Spot : QuotesSourceType.Mt;
+
+            var log = CreateLogWithSlack(services, appSettings.SlackNotifications, jobSettings.Db.LogsConnString);
+
+            builder.RegisterModule(new JobModule(jobSettings, quotesSourceType, appSettings.Assets, log));
 
             builder.Populate(services);
 
@@ -119,7 +124,7 @@ namespace Lykke.Job.CandlesProducer
             Console.WriteLine("Cleaned up");
         }
 
-        private static ILog CreateLogWithSlack(IServiceCollection services, AppSettings settings)
+        private static ILog CreateLogWithSlack(IServiceCollection services, AppSettings.SlackNotificationsSettings slackNotificationsSettings, string logsConnString)
         {
             var consoleLogger = new LogToConsole();
             var aggregateLogger = new AggregateLogger();
@@ -129,11 +134,11 @@ namespace Lykke.Job.CandlesProducer
             // Creating slack notification service, which logs own azure queue processing messages to aggregate log
             var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
             {
-                ConnectionString = settings.SlackNotifications.AzureQueue.ConnectionString,
-                QueueName = settings.SlackNotifications.AzureQueue.QueueName
+                ConnectionString = slackNotificationsSettings.AzureQueue.ConnectionString,
+                QueueName = slackNotificationsSettings.AzureQueue.QueueName
             }, aggregateLogger);
 
-            var dbLogConnectionString = settings.CandlesProducerJob.Db.LogsConnString;
+            var dbLogConnectionString = logsConnString;
 
             // Creating azure storage logger, which logs own messages to concole log
             if (!string.IsNullOrEmpty(dbLogConnectionString) && !(dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}")))

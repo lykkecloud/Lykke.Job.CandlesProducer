@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Service.Assets.Client.Custom;
 
 namespace Lykke.Job.CandlesProducer.Core
@@ -6,17 +8,18 @@ namespace Lykke.Job.CandlesProducer.Core
     public class AppSettings
     {
         public CandlesProducerSettings CandlesProducerJob { get; set; }
+        public CandlesProducerSettings MtCandlesProducerJob { get; set; }
         public SlackNotificationsSettings SlackNotifications { get; set; }
         public AssetsSettings Assets { get; set; }
 
         public class CandlesProducerSettings
         {
             public DbSettings Db { get; set; }
-            public AssetsCacheSettings AssetsCache { get; set; }
-            public RabbitSettingsWithDeadLetter QuotesSubscribtion { get; set; }
-            public RabbitSettings CandlesPublication { get; set; }
+            public AssetsCacheSettings AssetsCache { get; set; }            
+            public RabbitSettingsWithDeadLetter QuotesSubscribtion { get; set; }            
+            public RabbitSettings CandlesPublication { get; set; }            
         }
-
+        
         public class AssetsCacheSettings
         {
             public TimeSpan ExpirationPeriod { get; set; }
