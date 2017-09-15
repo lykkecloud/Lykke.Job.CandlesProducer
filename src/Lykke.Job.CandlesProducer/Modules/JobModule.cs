@@ -14,6 +14,7 @@ using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,11 +24,11 @@ namespace Lykke.Job.CandlesProducer.Modules
     {        
         private readonly ILog _log;
         private readonly IServiceCollection _services;
-        private readonly AppSettings.CandlesProducerSettings _settings;
+        private readonly CandlesProducerSettings _settings;
         private readonly QuotesSourceType _quotesSourceType;
         private readonly AssetsSettings _assetsSettings;        
 
-        public JobModule(AppSettings.CandlesProducerSettings settings, QuotesSourceType quotesSourceType, AssetsSettings assetsSettings, ILog log)
+        public JobModule(CandlesProducerSettings settings, QuotesSourceType quotesSourceType, AssetsSettings assetsSettings, ILog log)
         {
             _settings = settings;
             _quotesSourceType = quotesSourceType;

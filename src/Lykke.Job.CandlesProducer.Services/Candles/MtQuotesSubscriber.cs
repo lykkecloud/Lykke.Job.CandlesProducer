@@ -7,6 +7,7 @@ using Common.Log;
 using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker;
 using Lykke.RabbitMqBroker.Subscriber;
 
@@ -16,11 +17,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly AppSettings.RabbitSettingsWithDeadLetter _rabbitSettings;
+        private readonly RabbitSettingsWithDeadLetter _rabbitSettings;
 
         private RabbitMqSubscriber<MtQuote> _subscriber;
 
-        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, AppSettings.RabbitSettingsWithDeadLetter rabbitSettings)
+        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
         {
             _log = log;
             _candlesManager = candlesManager;

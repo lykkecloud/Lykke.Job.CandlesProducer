@@ -11,6 +11,8 @@ using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
+using Lykke.Job.CandlesProducer.Services;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Logs;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
@@ -124,7 +126,7 @@ namespace Lykke.Job.CandlesProducer
             Console.WriteLine("Cleaned up");
         }
 
-        private static ILog CreateLogWithSlack(IServiceCollection services, AppSettings.SlackNotificationsSettings slackNotificationsSettings, string logsConnString)
+        private static ILog CreateLogWithSlack(IServiceCollection services, SlackNotificationsSettings slackNotificationsSettings, string logsConnString)
         {
             var consoleLogger = new LogToConsole();
             var aggregateLogger = new AggregateLogger();

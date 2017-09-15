@@ -5,6 +5,7 @@ using Lykke.Domain.Prices;
 using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker.Publisher;
 using Newtonsoft.Json;
 
@@ -55,11 +56,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         }
 
         private readonly ILog _log;
-        private readonly AppSettings.RabbitSettings _rabbitSettings;
+        private readonly RabbitSettings _rabbitSettings;
 
         private RabbitMqPublisher<ICandle> _publisher;
 
-        public CandlesPublisher(ILog log, AppSettings.RabbitSettings rabbitSettings)
+        public CandlesPublisher(ILog log, RabbitSettings rabbitSettings)
         {
             _log = log;
             _rabbitSettings = rabbitSettings;
