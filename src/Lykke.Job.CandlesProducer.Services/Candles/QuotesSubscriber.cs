@@ -6,7 +6,6 @@ using Common.Log;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
-using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker;
@@ -18,23 +17,21 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly RabbitSettingsWithDeadLetter _rabbitSettings;
+        private readonly string _rabbitConnectionString;
 
         private RabbitMqSubscriber<IQuote> _subscriber;
 
-        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
+        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, string rabbitConnectionString)
         {
             _log = log;
             _candlesManager = candlesManager;
-            _rabbitSettings = rabbitSettings;
+            _rabbitConnectionString = rabbitConnectionString;
         }
 
         public void Start()
         {
-            // TODO: remove "lykke." from exchange name in CandlesProducerJob.QuotesSubscribtion.ExchangeName 
-            // and no need for CandlesProducerJob.QuotesSubscribtion.DeadLetterExchangeName settings
-            var settings = RabbitMqSubscriptionSettings.CreateForSubscriber(_rabbitSettings.ConnectionString,
-                    _rabbitSettings.ExchangeName, "candlesproducer")
+            var settings = RabbitMqSubscriptionSettings
+                .CreateForSubscriber(_rabbitConnectionString, "quotefeed", "candlesproducer")
                 .MakeDurable()
                 .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 

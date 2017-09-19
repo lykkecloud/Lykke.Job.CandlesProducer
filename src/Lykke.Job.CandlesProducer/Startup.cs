@@ -8,7 +8,6 @@ using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
-using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
 using Lykke.Job.CandlesProducer.Services;
