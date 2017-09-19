@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using Lykke.Domain.Prices.Model;
-using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker;
 using Lykke.RabbitMqBroker.Subscriber;
 
@@ -17,28 +15,23 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly RabbitSettingsWithDeadLetter _rabbitSettings;
+        private readonly string _rabbitConnectionString;
 
         private RabbitMqSubscriber<MtQuote> _subscriber;
 
-        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
+        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, string rabbitConnectionString)
         {
             _log = log;
             _candlesManager = candlesManager;
-            _rabbitSettings = rabbitSettings;
+            _rabbitConnectionString = rabbitConnectionString;
         }
 
         public void Start()
         {
-            var settings = new RabbitMqSubscriptionSettings
-            {
-                ConnectionString = _rabbitSettings.ConnectionString,
-                QueueName = $"{_rabbitSettings.ExchangeName}.candlesproducer",
-                ExchangeName = _rabbitSettings.ExchangeName,
-                DeadLetterExchangeName = _rabbitSettings.DeadLetterExchangeName,
-                RoutingKey = "",
-                IsDurable = true
-            };
+            var settings = RabbitMqSubscriptionSettings
+                .CreateForSubscriber(_rabbitConnectionString, "lykke.mt", "pricefeed", "lykke.mt", "candlesproducer")
+                .MakeDurable()
+                .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
             try
             {

@@ -4,7 +4,6 @@
     {
         public DbSettings Db { get; set; }
         public AssetsCacheSettings AssetsCache { get; set; }
-        public RabbitSettingsWithDeadLetter QuotesSubscribtion { get; set; }
-        public RabbitSettings CandlesPublication { get; set; }
+        public RabbitConnectionsStringSettings Rabbit { get; set; }
     }
 }

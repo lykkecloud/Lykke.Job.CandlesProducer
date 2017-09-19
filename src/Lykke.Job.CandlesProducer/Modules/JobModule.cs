@@ -4,7 +4,6 @@ using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Blob;
 using Common.Log;
 using Lykke.Job.CandlesProducer.AzureRepositories;
-using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -24,15 +23,13 @@ namespace Lykke.Job.CandlesProducer.Modules
 {
     public class JobModule : Module
     {
-        private readonly IReloadingManager<AppSettings.CandlesProducerSettings> _settings;
+        private readonly IReloadingManager<CandlesProducerSettings> _settings;
         private readonly IReloadingManager<AssetsSettings> _assetsSettings;
         private readonly ILog _log;
         private readonly IServiceCollection _services;
-        private readonly CandlesProducerSettings _settings;
         private readonly QuotesSourceType _quotesSourceType;
-        private readonly AssetsSettings _assetsSettings;        
 
-        public JobModule(IReloadingManager<AppSettings.CandlesProducerSettings> settings, IReloadingManager<AssetsSettings> assetsSettings, ILog log)
+        public JobModule(IReloadingManager<CandlesProducerSettings> settings, IReloadingManager<AssetsSettings> assetsSettings, QuotesSourceType quotesSourceType, ILog log)
         {
             _settings = settings;
             _assetsSettings = assetsSettings;
