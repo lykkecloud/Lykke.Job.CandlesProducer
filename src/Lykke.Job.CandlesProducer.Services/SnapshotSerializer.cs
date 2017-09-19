@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Services;
-using Lykke.Job.CandlesProducer.Core.Services.Candles;
 
 namespace Lykke.Job.CandlesProducer.Services
 {

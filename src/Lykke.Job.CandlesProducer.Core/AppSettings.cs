@@ -13,8 +13,7 @@ namespace Lykke.Job.CandlesProducer.Core
         {
             public DbSettings Db { get; set; }
             public AssetsCacheSettings AssetsCache { get; set; }
-            public RabbitSettingsWithDeadLetter QuotesSubscribtion { get; set; }
-            public RabbitSettings CandlesPublication { get; set; }
+            public RabbitConnectionStringSettings Rabbit { get; set; }
         }
 
         public class AssetsCacheSettings
@@ -40,15 +39,10 @@ namespace Lykke.Job.CandlesProducer.Core
             public string QueueName { get; set; }
         }
 
-        public class RabbitSettings
+        public class RabbitConnectionStringSettings
         {
-            public string ConnectionString { get; set; }
-            public string ExchangeName { get; set; }
-        }
-
-        public class RabbitSettingsWithDeadLetter : RabbitSettings
-        {
-            public string DeadLetterExchangeName { get; set; }
+            public string QuotesSubscribtion { get; set; }
+            public string CandlesPublication { get; set; }
         }
     }
 }

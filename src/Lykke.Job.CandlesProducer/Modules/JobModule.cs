@@ -3,8 +3,6 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Blob;
 using Common.Log;
-using Lykke.Domain.Prices.Contracts;
-using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.AzureRepositories;
 using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Domain;
@@ -77,12 +75,12 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<QuotesSubscriber>()
                 .As<IQuotesSubscriber>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.QuotesSubscribtion));
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.QuotesSubscribtion));
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
                 .SingleInstance()   
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.CandlesPublication))
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.CandlesPublication))
                 .WithParameter(TypedParameter.From<IPublishingQueueRepository<ICandle>>(
                     new BlobPublishingQueueRepository<CandleMessage, ICandle>(
                         AzureBlobStorage.Create(_settings.ConnectionString(x => x.Db.SnapshotsConnectionString)))));
