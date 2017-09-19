@@ -26,8 +26,9 @@ namespace Lykke.Job.CandlesProducer
     public class Startup
     {
         public IHostingEnvironment Environment { get; }
-        public IContainer ApplicationContainer { get; set; }
+        public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
+        public ILog Log { get; private set; }
 
         public Startup(IHostingEnvironment env)
         {
@@ -58,10 +59,10 @@ namespace Lykke.Job.CandlesProducer
             });
 
             var builder = new ContainerBuilder();
-            var appSettings = Environment.IsDevelopment()
-                ? Configuration.Get<AppSettings>()
-                : HttpSettingsLoader.Load<AppSettings>(Configuration.GetValue<string>("SettingsUrl"));
+            var appSettings = Configuration.LoadSettings<AppSettings>();
+            Log = CreateLogWithSlack(services, appSettings);
 
+            builder.RegisterModule(new JobModule(appSettings.Nested(x => x.CandlesProducerJob), appSettings.Nested(x => x.Assets), Log));
             var jobSettings = appSettings.CandlesProducerJob ?? appSettings.MtCandlesProducerJob;
             var quotesSourceType = appSettings.CandlesProducerJob != null ? QuotesSourceType.Spot : QuotesSourceType.Mt;
 
@@ -97,36 +98,57 @@ namespace Lykke.Job.CandlesProducer
 
         private void StartApplication()
         {
-            Console.WriteLine("Starting...");
+            try
+            {
+                Console.WriteLine("Starting...");
 
-            var startupManager = ApplicationContainer.Resolve<IStartupManager>();
+                var startupManager = ApplicationContainer.Resolve<IStartupManager>();
 
-            startupManager.StartAsync().Wait();
+                startupManager.StartAsync().Wait();
 
-            Console.WriteLine("Started");
+                Console.WriteLine("Started");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+            }
         }
 
         private void StopApplication()
         {
-            Console.WriteLine("Stopping...");
+            try
+            {
+                Console.WriteLine("Stopping...");
 
-            var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
+                var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
-            shutdownManager.ShutdownAsync();
+                shutdownManager.ShutdownAsync();
 
-            Console.WriteLine("Stopped");
+                Console.WriteLine("Stopped");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex); ;
+            }
         }
 
         private void CleanUp()
         {
-            Console.WriteLine("Cleaning up...");
+            try
+            {
+                Console.WriteLine("Cleaning up...");
 
-            ApplicationContainer.Dispose();
+                ApplicationContainer.Dispose();
 
-            Console.WriteLine("Cleaned up");
+                Console.WriteLine("Cleaned up");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+            }
         }
 
-        private static ILog CreateLogWithSlack(IServiceCollection services, SlackNotificationsSettings slackNotificationsSettings, string logsConnString)
+        private static ILog CreateLogWithSlack(IServiceCollection services, IReloadingManager<AppSettings> settings)
         {
             var consoleLogger = new LogToConsole();
             var aggregateLogger = new AggregateLogger();
@@ -136,11 +158,12 @@ namespace Lykke.Job.CandlesProducer
             // Creating slack notification service, which logs own azure queue processing messages to aggregate log
             var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
             {
-                ConnectionString = slackNotificationsSettings.AzureQueue.ConnectionString,
-                QueueName = slackNotificationsSettings.AzureQueue.QueueName
+                ConnectionString = settings.CurrentValue.SlackNotifications.AzureQueue.ConnectionString,
+                QueueName = settings.CurrentValue.SlackNotifications.AzureQueue.QueueName
             }, aggregateLogger);
 
-            var dbLogConnectionString = logsConnString;
+            var dbLogConnectionStringManager = settings.Nested(x => x.CandlesProducerJob.Db.LogsConnString);
+            var dbLogConnectionString = dbLogConnectionStringManager.CurrentValue;
 
             // Creating azure storage logger, which logs own messages to concole log
             if (!string.IsNullOrEmpty(dbLogConnectionString) && !(dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}")))
@@ -149,7 +172,7 @@ namespace Lykke.Job.CandlesProducer
 
                 var persistenceManager = new LykkeLogToAzureStoragePersistenceManager(
                     appName,
-                    AzureTableStorage<LogEntity>.Create(() => dbLogConnectionString, "CandlesProducerLog", consoleLogger),
+                    AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "CandlesProducerLog", consoleLogger),
                     consoleLogger);
 
                 var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(appName, slackService, consoleLogger);

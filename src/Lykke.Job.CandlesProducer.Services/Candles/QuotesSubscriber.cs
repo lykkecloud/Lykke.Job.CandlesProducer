@@ -31,15 +31,12 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Start()
         {
-            var settings = new RabbitMqSubscriptionSettings
-            {
-                ConnectionString = _rabbitSettings.ConnectionString,
-                QueueName = $"{_rabbitSettings.ExchangeName}.candlesproducer",
-                ExchangeName = _rabbitSettings.ExchangeName,
-                DeadLetterExchangeName = _rabbitSettings.DeadLetterExchangeName,
-                RoutingKey = "",
-                IsDurable = true
-            };
+            // TODO: remove "lykke." from exchange name in CandlesProducerJob.QuotesSubscribtion.ExchangeName 
+            // and no need for CandlesProducerJob.QuotesSubscribtion.DeadLetterExchangeName settings
+            var settings = RabbitMqSubscriptionSettings.CreateForSubscriber(_rabbitSettings.ConnectionString,
+                    _rabbitSettings.ExchangeName, "candlesproducer")
+                .MakeDurable()
+                .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
             try
             {
@@ -63,7 +60,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Stop()
         {
-            _subscriber.Stop();
+            _subscriber?.Stop();
         }
 
         private async Task ProcessQuoteAsync(IQuote quote)
@@ -112,7 +109,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Dispose()
         {
-            _subscriber.Dispose();
+            _subscriber?.Dispose();
         }
     }
 }
