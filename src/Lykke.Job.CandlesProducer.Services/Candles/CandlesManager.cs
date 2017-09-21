@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;

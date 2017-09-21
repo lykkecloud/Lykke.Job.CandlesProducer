@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Autofac;
 using Common;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;

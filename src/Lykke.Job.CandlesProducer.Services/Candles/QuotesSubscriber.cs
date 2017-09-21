@@ -6,9 +6,7 @@ using Common.Log;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
-using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker;
 using Lykke.RabbitMqBroker.Subscriber;
 
@@ -18,28 +16,23 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly RabbitSettingsWithDeadLetter _rabbitSettings;
+        private readonly string _rabbitConnectionString;
 
         private RabbitMqSubscriber<IQuote> _subscriber;
 
-        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
+        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, string rabbitConnectionString)
         {
             _log = log;
             _candlesManager = candlesManager;
-            _rabbitSettings = rabbitSettings;
+            _rabbitConnectionString = rabbitConnectionString;
         }
 
         public void Start()
         {
-            var settings = new RabbitMqSubscriptionSettings
-            {
-                ConnectionString = _rabbitSettings.ConnectionString,
-                QueueName = $"{_rabbitSettings.ExchangeName}.candlesproducer",
-                ExchangeName = _rabbitSettings.ExchangeName,
-                DeadLetterExchangeName = _rabbitSettings.DeadLetterExchangeName,
-                RoutingKey = "",
-                IsDurable = true
-            };
+            var settings = RabbitMqSubscriptionSettings
+                .CreateForSubscriber(_rabbitConnectionString, "quotefeed", "candlesproducer")
+                .MakeDurable()
+                .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
             try
             {
@@ -63,7 +56,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Stop()
         {
-            _subscriber.Stop();
+            _subscriber?.Stop();
         }
 
         private async Task ProcessQuoteAsync(IQuote quote)
@@ -112,7 +105,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Dispose()
         {
-            _subscriber.Dispose();
+            _subscriber?.Dispose();
         }
     }
 }
