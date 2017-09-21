@@ -14,28 +14,35 @@ using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
     public class JobModule : Module
-    {
-        private readonly AppSettings _settings;
+    {        
         private readonly ILog _log;
         private readonly IServiceCollection _services;
+        private readonly CandlesProducerSettings _settings;
+        private readonly QuotesSourceType _quotesSourceType;
+        private readonly AssetsSettings _assetsSettings;        
 
-        public JobModule(AppSettings settings, ILog log)
+        public JobModule(CandlesProducerSettings settings, QuotesSourceType quotesSourceType, AssetsSettings assetsSettings, ILog log)
         {
             _settings = settings;
+            _quotesSourceType = quotesSourceType;
+            _assetsSettings = assetsSettings;            
             _log = log;
 
             _services = new ServiceCollection();
         }
 
         protected override void Load(ContainerBuilder builder)
-        {
-            builder.RegisterInstance(_settings)
+        {   
+            builder.RegisterInstance(_settings.QuotesSubscribtion)
+                .SingleInstance();
+            builder.RegisterInstance(_settings.CandlesPublication)
                 .SingleInstance();
 
             builder.RegisterInstance(_log)
@@ -56,8 +63,8 @@ namespace Lykke.Job.CandlesProducer.Modules
         private void RegisterAssetsServices(ContainerBuilder builder)
         {
             _services.UseAssetsClient(AssetServiceSettings.Create(
-                _settings.Assets,
-                _settings.CandlesProducerJob.AssetsCache.ExpirationPeriod));
+                _assetsSettings,
+                _settings.AssetsCache.ExpirationPeriod));
 
             builder.RegisterType<AssetPairsManager>()
                 .As<IAssetPairsManager>()
@@ -72,15 +79,16 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
 
-            builder.RegisterType<QuotesSubscriber>()
+
+            builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
+                    ? typeof(QuotesSubscriber)
+                    : typeof(MtQuotesSubscriber))
                 .As<IQuotesSubscriber>()
-                .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CandlesProducerJob.QuotesSubscribtion));
+                .SingleInstance();
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
-                .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CandlesProducerJob.CandlesPublication));
+                .SingleInstance();                
 
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()
@@ -98,7 +106,7 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
                 .WithParameter(TypedParameter.From<IBlobStorage>(
-                    new AzureBlobStorage(_settings.CandlesProducerJob.Db.SnapshotsConnectionString)));
+                    new AzureBlobStorage(_settings.Db.SnapshotsConnectionString)));
 
             builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
                 .As<ISnapshotSerializer>();
@@ -106,7 +114,7 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<CandlesGeneratorSnapshotRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, ICandle>>>()
                 .WithParameter(TypedParameter.From<IBlobStorage>(
-                    new AzureBlobStorage(_settings.CandlesProducerJob.Db.SnapshotsConnectionString)));
+                    new AzureBlobStorage(_settings.Db.SnapshotsConnectionString)));
 
             builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, ICandle>>>()
                 .As<ISnapshotSerializer>()

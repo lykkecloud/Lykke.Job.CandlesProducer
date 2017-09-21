@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common;
 using Common.Log;
-using Lykke.Domain.Prices;
-using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.Core;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
@@ -14,15 +13,15 @@ using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
-    public class QuotesSubscriber : IQuotesSubscriber
+    public class MtQuotesSubscriber : IQuotesSubscriber
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
         private readonly RabbitSettingsWithDeadLetter _rabbitSettings;
 
-        private RabbitMqSubscriber<IQuote> _subscriber;
+        private RabbitMqSubscriber<MtQuote> _subscriber;
 
-        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
+        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, RabbitSettingsWithDeadLetter rabbitSettings)
         {
             _log = log;
             _candlesManager = candlesManager;
@@ -43,11 +42,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
             try
             {
-                _subscriber = new RabbitMqSubscriber<IQuote>(settings, 
+                _subscriber = new RabbitMqSubscriber<MtQuote>(settings, 
                     new ResilientErrorHandlingStrategy(_log, settings, 
                         retryTimeout: TimeSpan.FromSeconds(10),
                         next: new DeadQueueErrorHandlingStrategy(_log, settings)))
-                    .SetMessageDeserializer(new JsonMessageDeserializer<Quote>())
+                    .SetMessageDeserializer(new JsonMessageDeserializer<MtQuote>())
                     .SetMessageReadStrategy(new MessageReadQueueStrategy())
                     .Subscribe(ProcessQuoteAsync)
                     .CreateDefaultBinding()
@@ -66,7 +65,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             _subscriber.Stop();
         }
 
-        private async Task ProcessQuoteAsync(IQuote quote)
+        private async Task ProcessQuoteAsync(MtQuote quote)
         {
             try
             {
@@ -74,20 +73,37 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 if (validationErrors.Any())
                 {
                     var message = string.Join("\r\n", validationErrors);
-                    await _log.WriteWarningAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), message);
+                    await _log.WriteWarningAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), message);
 
                     return;
                 }
 
-                await _candlesManager.ProcessQuoteAsync(quote);
+                var bidQuote = new Quote
+                {
+                    AssetPair = quote.Instrument,
+                    IsBuy = true,
+                    Price = quote.Bid,
+                    Timestamp = quote.Date
+                };
+
+                var askQuote = new Quote
+                {
+                    AssetPair = quote.Instrument,
+                    IsBuy = false,
+                    Price = quote.Ask,
+                    Timestamp = quote.Date
+                };
+
+                await _candlesManager.ProcessQuoteAsync(bidQuote);
+                await _candlesManager.ProcessQuoteAsync(askQuote);
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), $"Failed to process quote: {quote.ToJson()}", ex);
+                await _log.WriteErrorAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), $"Failed to process quote: {quote.ToJson()}", ex);
             }
         }
 
-        private static IReadOnlyCollection<string> ValidateQuote(IQuote quote)
+        private static IReadOnlyCollection<string> ValidateQuote(MtQuote quote)
         {
             var errors = new List<string>();
 
@@ -97,13 +113,13 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
             else
             {
-                if (string.IsNullOrEmpty(quote.AssetPair))
+                if (string.IsNullOrEmpty(quote.Instrument))
                 {
-                    errors.Add("Empty 'AssetPair'");
+                    errors.Add("Empty 'Instrument'");
                 }
-                if (quote.Timestamp.Kind != DateTimeKind.Utc)
+                if (quote.Date.Kind != DateTimeKind.Utc)
                 {
-                    errors.Add($"Invalid 'Timestamp' Kind (UTC is required): '{quote.Timestamp.Kind}'");
+                    errors.Add($"Invalid 'Date' Kind (UTC is required): '{quote.Date.Kind}'");
                 }
             }
 
