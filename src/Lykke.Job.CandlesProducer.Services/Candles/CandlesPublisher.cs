@@ -27,7 +27,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForPublisher(_settings.ConnectionString, _settings.ExchangeNamespace, "candles")
+                .CreateForPublisher(_settings.ConnectionString, _settings.Namespace, "candles")
                 .MakeDurable()
                 .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
