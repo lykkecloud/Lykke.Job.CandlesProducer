@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker.Publisher;
 using Lykke.RabbitMqBroker.Subscriber;
 
@@ -11,22 +12,22 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     public class CandlesPublisher : ICandlesPublisher
     {
         private readonly ILog _log;
-        private readonly string _rabbitConnectionsString;
+        private readonly CandlesPublicationRabbitSettings _settings;
         private readonly IPublishingQueueRepository<ICandle> _publishingQueueRepository;
 
         private RabbitMqPublisher<ICandle> _publisher;
 
-        public CandlesPublisher(ILog log, string rabbitConnectionsString, IPublishingQueueRepository<ICandle> publishingQueueRepository)
+        public CandlesPublisher(ILog log, CandlesPublicationRabbitSettings settings, IPublishingQueueRepository<ICandle> publishingQueueRepository)
         {
             _log = log;
-            _rabbitConnectionsString = rabbitConnectionsString;
+            _settings = settings;
             _publishingQueueRepository = publishingQueueRepository;
         }
 
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForPublisher(_rabbitConnectionsString, "candles")
+                .CreateForPublisher(_settings.ConnectionString, _settings.Namespace, "candles")
                 .MakeDurable()
                 .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
