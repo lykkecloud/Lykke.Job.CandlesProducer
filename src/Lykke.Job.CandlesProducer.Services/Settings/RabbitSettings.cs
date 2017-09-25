@@ -1,8 +1,8 @@
 ﻿namespace Lykke.Job.CandlesProducer.Services.Settings
 {
-    public class RabbitConnectionsStringSettings
+    public class RabbitSettings
     {
         public string QuotesSubscribtion { get; set; }
-        public string CandlesPublication { get; set; }
+        public CandlesPublicationRabbitSettings CandlesPublication { get; set; }
     }
 }

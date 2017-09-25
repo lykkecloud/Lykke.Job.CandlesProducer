@@ -12,21 +12,23 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly string _rabbitConnectionsString;
+        private readonly string _exchangeNamespace;
         private readonly IPublishingQueueRepository<ICandle> _publishingQueueRepository;
 
         private RabbitMqPublisher<ICandle> _publisher;
 
-        public CandlesPublisher(ILog log, string rabbitConnectionsString, IPublishingQueueRepository<ICandle> publishingQueueRepository)
+        public CandlesPublisher(ILog log, string rabbitConnectionsString, string exchangeNamespace, IPublishingQueueRepository<ICandle> publishingQueueRepository)
         {
             _log = log;
             _rabbitConnectionsString = rabbitConnectionsString;
+            _exchangeNamespace = exchangeNamespace;
             _publishingQueueRepository = publishingQueueRepository;
         }
 
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForPublisher(_rabbitConnectionsString, "candles")
+                .CreateForPublisher(_rabbitConnectionsString, _exchangeNamespace, "candles")
                 .MakeDurable()
                 .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
 
