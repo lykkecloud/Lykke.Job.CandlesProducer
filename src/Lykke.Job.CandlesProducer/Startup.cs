@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
@@ -36,8 +35,6 @@ namespace Lykke.Job.CandlesProducer
 
             Configuration = builder.Build();
             Environment = env;
-
-            Console.WriteLine($"ENV_INFO: {System.Environment.GetEnvironmentVariable("ENV_INFO")}");
         }
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
@@ -108,7 +105,7 @@ namespace Lykke.Job.CandlesProducer
             }
             catch (Exception ex)
             {
-                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
             }
         }
 
@@ -126,7 +123,7 @@ namespace Lykke.Job.CandlesProducer
             }
             catch (Exception ex)
             {
-                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
             }
         }
 
@@ -142,7 +139,8 @@ namespace Lykke.Job.CandlesProducer
             }
             catch (Exception ex)
             {
-                Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                (Log as IDisposable)?.Dispose();
             }
         }
 

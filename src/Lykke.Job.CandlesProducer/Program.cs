@@ -14,16 +14,25 @@ namespace Lykke.Job.CandlesProducer
 #else
             Console.WriteLine("Is RELEASE");
 #endif
+            Console.WriteLine($"ENV_INFO: {Environment.GetEnvironmentVariable("ENV_INFO")}");
 
-            var webHost = new WebHostBuilder()
-                .UseKestrel()
-                .UseUrls("http://*:5000")
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseStartup<Startup>()
-                .UseApplicationInsights()
-                .Build();
+            try
+            {
+                var webHost = new WebHostBuilder()
+                    .UseKestrel()
+                    .UseUrls("http://*:5000")
+                    .UseContentRoot(Directory.GetCurrentDirectory())
+                    .UseStartup<Startup>()
+                    .UseApplicationInsights()
+                    .Build();
 
-            webHost.Run();
+                webHost.Run();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Fatal error:");
+                Console.WriteLine(ex);
+            }
 
             Console.WriteLine("Terminated");
         }
