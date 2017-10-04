@@ -13,15 +13,14 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly ILog _log;
         private readonly CandlesPublicationRabbitSettings _settings;
-        private readonly IPublishingQueueRepository<ICandle> _publishingQueueRepository;
+
 
         private RabbitMqPublisher<ICandle> _publisher;
 
-        public CandlesPublisher(ILog log, CandlesPublicationRabbitSettings settings, IPublishingQueueRepository<ICandle> publishingQueueRepository)
+        public CandlesPublisher(ILog log, CandlesPublicationRabbitSettings settings)
         {
             _log = log;
             _settings = settings;
-            _publishingQueueRepository = publishingQueueRepository;
         }
 
         public void Start()
@@ -34,7 +33,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             _publisher = new RabbitMqPublisher<ICandle>(settings)
                 .SetSerializer(new JsonMessageSerializer<ICandle>())
                 .SetPublishStrategy(new DefaultFanoutPublishStrategy(settings))
-                .SetQueueRepository(_publishingQueueRepository)
+                .PublishSynchronously()
                 .SetLogger(_log)
                 .Start();
         }

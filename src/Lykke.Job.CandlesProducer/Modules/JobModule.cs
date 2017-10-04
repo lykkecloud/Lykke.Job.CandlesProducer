@@ -12,8 +12,6 @@ using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
-using Lykke.RabbitMq.Azure;
-using Lykke.RabbitMqBroker.Publisher;
 using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
@@ -84,11 +82,8 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
-                .SingleInstance()   
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.CandlesPublication))
-                .WithParameter(TypedParameter.From<IPublishingQueueRepository<ICandle>>(
-                    new BlobPublishingQueueRepository<CandleMessage, ICandle>(
-                        AzureBlobStorage.Create(_settings.ConnectionString(x => x.Db.SnapshotsConnectionString)))));
+                .SingleInstance()
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.CandlesPublication));
 
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()
