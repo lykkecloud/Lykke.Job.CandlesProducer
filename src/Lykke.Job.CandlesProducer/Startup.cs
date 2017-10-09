@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
@@ -86,32 +87,30 @@ namespace Lykke.Job.CandlesProducer
             app.UseSwaggerUi();
             app.UseStaticFiles();
 
-            appLifetime.ApplicationStarted.Register(StartApplication);
-            appLifetime.ApplicationStopping.Register(StopApplication);
-            appLifetime.ApplicationStopped.Register(CleanUp);
+            appLifetime.ApplicationStarted.Register(async () => await StartApplication());
+            appLifetime.ApplicationStopping.Register(async () => await StopApplication());
+            appLifetime.ApplicationStopped.Register(async () => await CleanUp());
         }
 
-        private void StartApplication()
+        private async Task StartApplication()
         {
             try
             {
-                Console.WriteLine("Starting...");
-
+                await Log.WriteMonitorAsync("", "", "Starting");
+                
                 var startupManager = ApplicationContainer.Resolve<IStartupManager>();
 
-                startupManager.StartAsync().Wait();
+                await startupManager.StartAsync();
 
-                Console.WriteLine("Started");
-
-                Log.WriteMonitorAsync("", "", "Started");
+                await Log.WriteMonitorAsync("", "", "Started");
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
             }
         }
 
-        private void StopApplication()
+        private async Task StopApplication()
         {
             try
             {
@@ -119,21 +118,27 @@ namespace Lykke.Job.CandlesProducer
 
                 var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
-                shutdownManager.ShutdownAsync().Wait();
+                await shutdownManager.ShutdownAsync();
 
                 Console.WriteLine("Stopped");
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                if (Log != null)
+                {
+                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                }
             }
         }
 
-        private void CleanUp()
+        private async Task CleanUp()
         {
             try
             {
-                Log?.WriteMonitorAsync("", "", "Terminating");
+                if (Log != null)
+                {
+                    await Log.WriteMonitorAsync("", "", "Terminating");
+                }
 
                 Console.WriteLine("Cleaning up...");
 
@@ -143,8 +148,11 @@ namespace Lykke.Job.CandlesProducer
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
-                (Log as IDisposable)?.Dispose();
+                if (Log != null)
+                {
+                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    (Log as IDisposable)?.Dispose();
+                }
             }
         }
 
