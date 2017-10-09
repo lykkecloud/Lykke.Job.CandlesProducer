@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -55,6 +55,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
 
             _assetMarketStates = state.ToDictionary(i => i.Key, i => new MarketState(i.Value.Ask, i.Value.Bid));
+        }
+
+        public string DescribeState(IImmutableDictionary<string, IMarketState> state)
+        {
+            return $"Assets count: {state.Count}";
         }
 
         public IQuote TryGenerate(IQuote quote, int assetPairAccuracy)

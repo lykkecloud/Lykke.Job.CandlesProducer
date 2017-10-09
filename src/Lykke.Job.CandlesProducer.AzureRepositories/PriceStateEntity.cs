@@ -1,15 +1,18 @@
-using System;
+﻿using System;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
-using Newtonsoft.Json;
+using MessagePack;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories
 {
+    [MessagePackObject]
     public class PriceStateEntity : IPriceState
     {
-        [JsonProperty("p")]
-        public double Price { get; set; }
-        [JsonProperty("m")]
+        [Key(0)]
+        public decimal Price { get; set; }
+        [Key(1)]
         public DateTime Moment { get; set; }
+
+        double IPriceState.Price => (double)Price;
 
         public static PriceStateEntity Create(IPriceState source)
         {
@@ -20,7 +23,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
 
             return new PriceStateEntity
             {
-                Price = source.Price,
+                Price = (decimal)source.Price,
                 Moment = source.Moment
             };
         }

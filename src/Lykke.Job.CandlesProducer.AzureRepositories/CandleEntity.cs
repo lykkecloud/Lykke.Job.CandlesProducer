@@ -1,35 +1,44 @@
 ﻿using System;
 using Lykke.Domain.Prices;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
-using Newtonsoft.Json;
+using MessagePack;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories
 {
-    public class CandleEntity :  ICandle
+    [MessagePackObject]
+    public class CandleEntity : ICandle
     {
-        [JsonProperty("a")]
+        [Key(0)]
         public string AssetPairId { get; set; }
 
-        [JsonProperty("p")]
+        [Key(1)]
         public PriceType PriceType { get; set; }
 
-        [JsonProperty("i")]
+        [Key(2)]
         public TimeInterval TimeInterval { get; set; }
 
-        [JsonProperty("t")]
+        [Key(3)]
         public DateTime Timestamp { get; set; }
 
-        [JsonProperty("o")]
-        public double Open { get; set; }
+        [Key(4)]
+        public decimal Open { get; set; }
 
-        [JsonProperty("c")]
-        public double Close { get; set; }
+        [Key(5)]
+        public decimal Close { get; set; }
 
-        [JsonProperty("h")]
-        public double High { get; set; }
+        [Key(6)]
+        public decimal High { get; set; }
 
-        [JsonProperty("l")]
-        public double Low { get; set; }
+        [Key(7)]
+        public decimal Low { get; set; }
+
+        double ICandle.Open => (double) Open;
+
+        double ICandle.Close => (double) Close;
+
+        double ICandle.High => (double) High;
+
+        double ICandle.Low => (double) Low;
 
         public static CandleEntity Create(ICandle candle)
         {
@@ -39,10 +48,10 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 PriceType = candle.PriceType,
                 TimeInterval = candle.TimeInterval,
                 Timestamp = candle.Timestamp,
-                Open = candle.Open,
-                Close = candle.Close,
-                Low = candle.Low,
-                High = candle.High
+                Open = (decimal) candle.Open,
+                Close = (decimal) candle.Close,
+                Low = (decimal) candle.Low,
+                High = (decimal) candle.High
             };
         }
     }

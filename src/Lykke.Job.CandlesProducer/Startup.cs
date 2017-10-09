@@ -102,6 +102,8 @@ namespace Lykke.Job.CandlesProducer
                 startupManager.StartAsync().Wait();
 
                 Console.WriteLine("Started");
+
+                Log.WriteMonitorAsync("", "", "Started");
             }
             catch (Exception ex)
             {
@@ -117,7 +119,7 @@ namespace Lykke.Job.CandlesProducer
 
                 var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
-                shutdownManager.ShutdownAsync();
+                shutdownManager.ShutdownAsync().Wait();
 
                 Console.WriteLine("Stopped");
             }
@@ -131,6 +133,8 @@ namespace Lykke.Job.CandlesProducer
         {
             try
             {
+                Log?.WriteMonitorAsync("", "", "Terminating");
+
                 Console.WriteLine("Cleaning up...");
 
                 ApplicationContainer.Dispose();

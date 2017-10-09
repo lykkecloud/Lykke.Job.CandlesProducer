@@ -1,13 +1,14 @@
 ﻿using Lykke.Job.CandlesProducer.Core.Domain.Candles;
-using Newtonsoft.Json;
+using MessagePack;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories
 {
+    [MessagePackObject]
     public class MarketStateEntity : IMarketState
     {
-        [JsonProperty("a")]
+        [Key(0)]
         public PriceStateEntity Ask { get; set; }
-        [JsonProperty("b")]
+        [Key(1)]
         public PriceStateEntity Bid { get; set; }
 
         IPriceState IMarketState.Ask => Ask;

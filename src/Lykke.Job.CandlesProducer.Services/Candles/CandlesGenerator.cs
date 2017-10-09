@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -185,6 +185,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
 
             _candles = state.ToDictionary(i => i.Key, i => Candle.Create(i.Value));
+        }
+
+        public string DescribeState(IImmutableDictionary<string, ICandle> state)
+        {
+            return $"Candles count: {state.Count}";
         }
 
         private static string GetKey(string assetPairId, TimeInterval timeInterval, PriceType priceType)

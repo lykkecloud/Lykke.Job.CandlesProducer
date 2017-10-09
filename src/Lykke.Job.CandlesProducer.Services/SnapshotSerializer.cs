@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -18,18 +18,26 @@ namespace Lykke.Job.CandlesProducer.Services
         {
             _stateHolder = stateHolder;
             _repository = repository;
-            _log = log;
+            _log = log.CreateComponentScope($"{nameof(SnapshotSerializer<TState>)}[{_stateHolder.GetType().Name}]");
         }
 
-        public Task SerializeAsync()
+        public async Task SerializeAsync()
         {
+            await _log.WriteInfoAsync(nameof(SerializeAsync), "", "Gettings state...");
+
             var state = _stateHolder.GetState();
 
-            return _repository.SaveAsync(state);
+            await _log.WriteInfoAsync(nameof(SerializeAsync), _stateHolder.DescribeState(state), "Saving state...");
+
+            await _repository.SaveAsync(state);
+
+            await _log.WriteInfoAsync(nameof(SerializeAsync), "", "State saved");
         }
 
         public async Task DeserializeAsync()
         {
+            await _log.WriteInfoAsync(nameof(DeserializeAsync), "", "Loading state...");
+            
             var state = await _repository.TryGetAsync();
 
             if (state == null)
@@ -40,7 +48,11 @@ namespace Lykke.Job.CandlesProducer.Services
                 return;
             }
 
+            await _log.WriteInfoAsync(nameof(DeserializeAsync), _stateHolder.DescribeState(state), "Settings state...");
+            
             _stateHolder.SetState(state);
+
+            await _log.WriteInfoAsync(nameof(DeserializeAsync), "", "State was set");
         }
     }
 }

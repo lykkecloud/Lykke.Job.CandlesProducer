@@ -3,7 +3,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Blob;
 using Common.Log;
-using Lykke.Job.CandlesProducer.AzureRepositories;
+using Lykke.Job.CandlesProducer.AzureRepositories.Migration;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -100,14 +100,14 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             var snapshotsConnStringManager = _settings.Nested(x => x.Db.SnapshotsConnectionString);
 
-            builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
+            builder.RegisterType<MidPriceQuoteGeneratorSnapshotMigrationRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
                 .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager)));
 
             builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
                 .As<ISnapshotSerializer>();
 
-            builder.RegisterType<CandlesGeneratorSnapshotRepository>()
+            builder.RegisterType<CandlesGeneratorSnapshotMigrationRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, ICandle>>>()
                 .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager)));
 
