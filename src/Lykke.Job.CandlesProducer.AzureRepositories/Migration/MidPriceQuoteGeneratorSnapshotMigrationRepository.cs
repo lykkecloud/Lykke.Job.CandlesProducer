@@ -31,7 +31,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories.Migration
             var newResult = await _repository.TryGetAsync();
             if (newResult == null)
             {
-                await _log.WriteWarningAsync(nameof(CandlesGeneratorSnapshotMigrationRepository), nameof(TryGetAsync), "",
+                await _log.WriteWarningAsync(nameof(MidPriceQuoteGeneratorSnapshotMigrationRepository), nameof(TryGetAsync), "",
                     "Failed to get snapshot in the new format, fallback to the legacy format");
 
                 return await _legacyRepository.TryGetAsync();
