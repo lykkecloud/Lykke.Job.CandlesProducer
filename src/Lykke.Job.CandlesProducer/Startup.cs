@@ -87,17 +87,15 @@ namespace Lykke.Job.CandlesProducer
             app.UseSwaggerUi();
             app.UseStaticFiles();
 
-            appLifetime.ApplicationStarted.Register(async () => await StartApplication());
-            appLifetime.ApplicationStopping.Register(async () => await StopApplication());
-            appLifetime.ApplicationStopped.Register(async () => await CleanUp());
+            appLifetime.ApplicationStarted.Register(() => StartApplication().Wait());
+            appLifetime.ApplicationStopping.Register(() => StopApplication().Wait());
+            appLifetime.ApplicationStopped.Register(() => CleanUp().Wait());
         }
 
         private async Task StartApplication()
         {
             try
             {
-                await Log.WriteMonitorAsync("", "", "Starting");
-                
                 var startupManager = ApplicationContainer.Resolve<IStartupManager>();
 
                 await startupManager.StartAsync();
@@ -114,13 +112,9 @@ namespace Lykke.Job.CandlesProducer
         {
             try
             {
-                Console.WriteLine("Stopping...");
-
                 var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
                 await shutdownManager.ShutdownAsync();
-
-                Console.WriteLine("Stopped");
             }
             catch (Exception ex)
             {
@@ -140,11 +134,7 @@ namespace Lykke.Job.CandlesProducer
                     await Log.WriteMonitorAsync("", "", "Terminating");
                 }
 
-                Console.WriteLine("Cleaning up...");
-
                 ApplicationContainer.Dispose();
-
-                Console.WriteLine("Cleaned up");
             }
             catch (Exception ex)
             {
