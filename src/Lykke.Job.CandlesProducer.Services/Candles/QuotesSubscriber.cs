@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AsyncFriendlyStackTrace;
 using Common.Log;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;
@@ -31,14 +32,14 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         {
             var settings = RabbitMqSubscriptionSettings
                 .CreateForSubscriber(_rabbitConnectionString, "quotefeed", "candlesproducer")
-                .MakeDurable()
-                .DelayTheRecconectionForA(delay: TimeSpan.FromSeconds(20));
+                .MakeDurable();
 
             try
             {
                 _subscriber = new RabbitMqSubscriber<IQuote>(settings, 
                     new ResilientErrorHandlingStrategy(_log, settings, 
-                        retryTimeout: TimeSpan.FromSeconds(10),
+                        retryTimeout: TimeSpan.FromSeconds(5),
+                        retryNum: int.MaxValue,
                         next: new DeadQueueErrorHandlingStrategy(_log, settings)))
                     .SetMessageDeserializer(new JsonMessageDeserializer<Quote>())
                     .SetMessageReadStrategy(new MessageReadQueueStrategy())
@@ -74,9 +75,10 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 await _candlesManager.ProcessQuoteAsync(quote);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                await _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), $"Failed to process quote: {quote.ToJson()}", ex);
+                await _log.WriteWarningAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "Failed to process quote");
+                throw;
             }
         }
 
