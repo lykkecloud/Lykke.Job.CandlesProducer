@@ -37,8 +37,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             {
                 _subscriber = new RabbitMqSubscriber<MtQuote>(settings, 
                     new ResilientErrorHandlingStrategy(_log, settings, 
-                        retryTimeout: TimeSpan.FromSeconds(5),
-                        retryNum: int.MaxValue,
+                        retryTimeout: TimeSpan.FromSeconds(10),
+                        retryNum: 10,
                         next: new DeadQueueErrorHandlingStrategy(_log, settings)))
                     .SetMessageDeserializer(new JsonMessageDeserializer<MtQuote>())
                     .SetMessageReadStrategy(new MessageReadQueueStrategy())
