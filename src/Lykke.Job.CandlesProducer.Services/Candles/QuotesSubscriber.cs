@@ -100,6 +100,10 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 {
                     errors.Add($"Invalid 'Timestamp' Kind (UTC is required): '{quote.Timestamp.Kind}'");
                 }
+                if (quote.Price <= 0)
+                {
+                    errors.Add($"Not positive price: '{quote.Price}'");
+                }
             }
 
             return errors;

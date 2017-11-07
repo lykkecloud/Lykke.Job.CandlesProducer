@@ -72,24 +72,39 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     return;
                 }
 
-                var bidQuote = new Quote
+                if (quote.Bid > 0)
                 {
-                    AssetPair = quote.Instrument,
-                    IsBuy = true,
-                    Price = quote.Bid,
-                    Timestamp = quote.Date
-                };
+                    var bidQuote = new Quote
+                    {
+                        AssetPair = quote.Instrument,
+                        IsBuy = true,
+                        Price = quote.Bid,
+                        Timestamp = quote.Date
+                    };
 
-                var askQuote = new Quote
+                    await _candlesManager.ProcessQuoteAsync(bidQuote);
+                }
+                else
                 {
-                    AssetPair = quote.Instrument,
-                    IsBuy = false,
-                    Price = quote.Ask,
-                    Timestamp = quote.Date
-                };
+                    await _log.WriteWarningAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "bid quote is skipped due to not positive price");
+                }
 
-                await _candlesManager.ProcessQuoteAsync(bidQuote);
-                await _candlesManager.ProcessQuoteAsync(askQuote);
+                if (quote.Ask > 0)
+                {
+                    var askQuote = new Quote
+                    {
+                        AssetPair = quote.Instrument,
+                        IsBuy = false,
+                        Price = quote.Ask,
+                        Timestamp = quote.Date
+                    };
+
+                    await _candlesManager.ProcessQuoteAsync(askQuote);
+                }
+                else
+                {
+                    await _log.WriteWarningAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "bid quote is skipped due to not positive price");
+                }
             }
             catch (Exception)
             {
