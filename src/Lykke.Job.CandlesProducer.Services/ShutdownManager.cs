@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 
 namespace Lykke.Job.CandlesProducer.Services
 {

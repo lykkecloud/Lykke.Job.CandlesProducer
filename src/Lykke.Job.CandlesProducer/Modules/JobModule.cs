@@ -9,9 +9,12 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Quotes.Mt;
+using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
 using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
@@ -74,7 +77,7 @@ namespace Lykke.Job.CandlesProducer.Modules
 
 
             builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
-                    ? typeof(QuotesSubscriber)
+                    ? typeof(SpotQuotesSubscriber)
                     : typeof(MtQuotesSubscriber))
                 .As<IQuotesSubscriber>()
                 .SingleInstance()
