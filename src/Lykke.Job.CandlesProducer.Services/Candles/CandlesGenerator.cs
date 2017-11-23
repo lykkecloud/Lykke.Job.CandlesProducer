@@ -1,200 +1,219 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Common;
+using Common.Log;
+using JetBrains.Annotations;
 using Lykke.Domain.Prices;
-using Lykke.Domain.Prices.Contracts;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using Newtonsoft.Json;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
+    [UsedImplicitly]
     public class CandlesGenerator : ICandlesGenerator
     {
-        private class Candle : IEquatable<Candle>, ICandle
+        private readonly ILog _log;
+        private ConcurrentDictionary<string, LinkedList<Candle>> _candles;
+        
+        public CandlesGenerator(ILog log)
         {
-            [JsonProperty("a")]
-            public string AssetPairId { get; }
-            [JsonProperty("p")]
-            public PriceType PriceType { get; }
-            [JsonProperty("i")]
-            public TimeInterval TimeInterval { get; }
-            [JsonProperty("t")]
-            public DateTime Timestamp { get; }
-            [JsonProperty("o")]
-            public double Open { get; }
-            [JsonProperty("c")]
-            public double Close { get; }
-            [JsonProperty("h")]
-            public double High { get; }
-            [JsonProperty("l")]
-            public double Low { get; }
-
-            private Candle(string assetPairId, PriceType priceType, TimeInterval timeInterval, DateTime timestamp, double open, double close, double low, double high)
-            {
-                AssetPairId = assetPairId;
-                PriceType = priceType;
-                TimeInterval = timeInterval;
-                Timestamp = timestamp;
-                Open = open;
-                Close = close;
-                Low = low;
-                High = high;
-            }
-
-            public static Candle Create(ICandle candle)
-            {
-                return new Candle
-                (
-                    candle.AssetPairId,
-                    candle.PriceType,
-                    candle.TimeInterval,
-                    candle.Timestamp,
-                    candle.Open,
-                    candle.Close,
-                    candle.Low,
-                    candle.High
-                );
-            }
-
-            public static Candle Create(IQuote quote, PriceType priceType, TimeInterval timeInterval)
-            {
-                var intervalTimestamp = quote.Timestamp.RoundTo(timeInterval);
-
-                return new Candle
-                (
-                    quote.AssetPair,
-                    priceType,
-                    timeInterval,
-                    intervalTimestamp,
-                    quote.Price,
-                    quote.Price,
-                    quote.Price,
-                    quote.Price
-                );
-            }
-
-            public static Candle Create(ICandle oldState, IQuote quote)
-            {
-                var intervalTimestamp = quote.Timestamp.RoundTo(oldState.TimeInterval);
-
-                // Start new candle?
-                if (intervalTimestamp != oldState.Timestamp)
-                {
-                    return Create(quote, oldState.PriceType, oldState.TimeInterval);
-                }
-
-                // Merge oldState with new quote
-                return new Candle(
-                    oldState.AssetPairId,
-                    oldState.PriceType,
-                    oldState.TimeInterval,
-                    intervalTimestamp,
-                    oldState.Open,
-                    quote.Price,
-                    Math.Min(oldState.Low, quote.Price),
-                    Math.Max(oldState.High, quote.Price));
-            }
-
-            public bool Equals(Candle other)
-            {
-                if (ReferenceEquals(null, other))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(this, other))
-                {
-                    return true;
-                }
-
-                return string.Equals(AssetPairId, other.AssetPairId) &&
-                       PriceType == other.PriceType &&
-                       TimeInterval == other.TimeInterval &&
-                       Timestamp.Equals(other.Timestamp) &&
-                       Open.Equals(other.Open) &&
-                       Close.Equals(other.Close) &&
-                       High.Equals(other.High) &&
-                       Low.Equals(other.Low);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(this, obj))
-                {
-                    return true;
-                }
-                if (obj.GetType() != GetType())
-                {
-                    return false;
-                }
-                return Equals((Candle)obj);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    var hashCode = AssetPairId != null ? AssetPairId.GetHashCode() : 0;
-                    hashCode = (hashCode * 397) ^ (int)PriceType;
-                    hashCode = (hashCode * 397) ^ (int)TimeInterval;
-                    hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
-                    hashCode = (hashCode * 397) ^ Open.GetHashCode();
-                    hashCode = (hashCode * 397) ^ Close.GetHashCode();
-                    hashCode = (hashCode * 397) ^ High.GetHashCode();
-                    hashCode = (hashCode * 397) ^ Low.GetHashCode();
-
-                    return hashCode;
-                }
-            }
+            _log = log;
+            _candles = new ConcurrentDictionary<string, LinkedList<Candle>>();
         }
 
-        private Dictionary<string, Candle> _candles;
-
-        public CandlesGenerator()
+        public CandleUpdateResult Update(string assetPair, DateTime timestamp, double price, double volume, PriceType priceType, TimeInterval timeInterval)
         {
-            _candles = new Dictionary<string, Candle>();
+            var key = GetKey(assetPair, timeInterval, priceType);
+            Candle oldCandle = null;
+            Candle newCandle = null;
+
+            _candles.AddOrUpdate(key,
+                addValueFactory: k =>
+                {
+                    var candles = new LinkedList<Candle>();
+
+                    newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+
+                    candles.AddFirst(newCandle);
+
+                    return candles;
+                },
+                updateValueFactory: (k, candles) =>
+                {
+                    var candleTimestamp = timestamp.RoundTo(timeInterval);
+
+                    if (candles.Any() && candleTimestamp < candles.First.Value.Timestamp)
+                    {
+                        // Given data is older then oldest of the cached candles.
+                        // Nothing to update here, so just creates the candles from the
+                        // given data and return it.
+
+                        _log.WriteWarningAsync(
+                            nameof(CandlesGenerator),
+                            nameof(Update),
+                            new
+                            {
+                                assetPair = assetPair,
+                                timestamp = timestamp,
+                                price = price,
+                                volume = volume,
+                                oldestCachedCandle = candles.First.Value
+                            }.ToJson(),
+                            "Candle is to old to update. New single tick candle will be returned as the result").Wait();
+
+                        newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+
+                        return candles;
+                    }
+
+                    // Given data is not older then oldest of the cached candles.
+
+                    for (var item = candles.First; item.Next != null; item = item.Next)
+                    {
+                        var candle = item.Value;
+
+                        if (candleTimestamp == candle.Timestamp)
+                        {
+                            // Candle matches exactly - updating it
+
+                            oldCandle = item.Value;
+                            newCandle = oldCandle.Update(timestamp, price, volume);
+
+                            item.Value = newCandle;
+
+                            return candles;
+                        }
+
+                        if (candleTimestamp > candle.Timestamp)
+                        {
+                            // We don't find candle that matches exactly
+                            // and curent candle is older than given data,
+                            // so insert new candle just before the current candle
+
+                            newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+
+                            candles.AddBefore(item, newCandle);
+
+                            TruncateTooBigCache(timeInterval, candles);
+
+                            return candles;
+                        }
+                    }
+
+                    // Given data is the newer than the newest cached candle, so add new candle to the tail
+
+                    newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+
+                    candles.AddLast(newCandle);
+
+                    TruncateTooBigCache(timeInterval, candles);
+
+                    return candles;
+                });
+
+            if (newCandle == null)
+            {
+                throw new InvalidOperationException("Now candle was created");
+            }
+
+            return new CandleUpdateResult(newCandle, oldCandle, !newCandle.Equals(oldCandle));
         }
 
-        public CandleMergeResult Merge(IQuote quote, PriceType priceType, TimeInterval timeInterval)
+        public void Undo(CandleUpdateResult candleUpdateResult)
         {
-            var key = GetKey(quote.AssetPair, timeInterval, priceType);
-            var newCandle = _candles.TryGetValue(key, out Candle oldCandle) ? 
-                Candle.Create(oldCandle, quote) : 
-                Candle.Create(quote, priceType, timeInterval);
+            if (!candleUpdateResult.WasChanged)
+            {
+                return;
+            }
 
-            _candles[key] = newCandle;
+            var candle = candleUpdateResult.Candle;
+            var oldCandle = candleUpdateResult.OldCandle;
+            var key = GetKey(candle.AssetPairId, candle.TimeInterval, candle.PriceType);
 
-            return new CandleMergeResult(newCandle, !newCandle.Equals(oldCandle));
+            // Key should be presented in the dictionary, since Update was called before and keys are never removed
+
+            _candles.AddOrUpdate(
+                key,
+                addValueFactory: k => throw new InvalidOperationException("Key should be already presented in the dictionary"),
+                updateValueFactory: (k, candles) =>
+                {
+                    for (var item = candles.First; item.Next != null; item = item.Next)
+                    {
+                        var cachedCandle = item.Value;
+
+                        if (cachedCandle.Timestamp == candle.Timestamp)
+                        {
+                            if (cachedCandle.LastUpdateTimestamp == candle.LastUpdateTimestamp)
+                            {
+                                // Candle wasn't changed between Update and Undo call, so we can just revert to the old candle
+
+                                if (oldCandle == null)
+                                {
+                                    candles.Remove(item);
+                                }
+                                else
+                                {
+                                    item.Value = oldCandle;
+                                }
+
+                                return candles;
+                            }
+
+                            // Candle was changed between Update and Undo call, so we should revert only addition operations
+
+                            var oldVolume = oldCandle?.TradingVolume ?? 0;
+                            var volumeToUndo = candle.TradingVolume - oldVolume;
+
+                            item.Value = cachedCandle.SubstractVolume(volumeToUndo);
+
+                            return candles;
+                        }    
+                    }
+
+                    // Candle was already evicted from the cache, so nothing to undo at all
+
+                    return candles;
+                });
         }
 
-        public IImmutableDictionary<string, ICandle> GetState()
+        public ImmutableDictionary<string, ImmutableList<ICandle>> GetState()
         {
-            return _candles.ToImmutableDictionary(i => i.Key, i => (ICandle)i.Value);
+            return _candles.ToImmutableDictionary(i => i.Key, i => i.Value.Cast<ICandle>().ToImmutableList());
         }
 
-        public void SetState(IImmutableDictionary<string, ICandle> state)
+        public void SetState(ImmutableDictionary<string, ImmutableList<ICandle>> state)
         {
             if (_candles.Count > 0)
             {
                 throw new InvalidOperationException("Candles generator state already not empty");
             }
 
-            _candles = state.ToDictionary(i => i.Key, i => Candle.Create(i.Value));
+            var keyValuePairs = state.Select(i => KeyValuePair.Create(i.Key, new LinkedList<Candle>(i.Value.Select(Candle.Copy))));
+
+            _candles = new ConcurrentDictionary<string, LinkedList<Candle>>(keyValuePairs);
         }
 
-        public string DescribeState(IImmutableDictionary<string, ICandle> state)
+        public string DescribeState(ImmutableDictionary<string, ImmutableList<ICandle>> state)
         {
-            return $"Candles count: {state.Count}";
+            return $"Candles count: {state.Sum(i => i.Value.Count)}";
         }
 
         private static string GetKey(string assetPairId, TimeInterval timeInterval, PriceType priceType)
         {
             return $"{assetPairId.Trim().ToUpper()}-{priceType}-{timeInterval}";
+        }
+
+        private static void TruncateTooBigCache(TimeInterval timeInterval, LinkedList<Candle> candles)
+        {
+            if (candles.Count > Constants.PublishedIntervalsHistoryDepth[timeInterval])
+            {
+                // Cached candles count limit is exceeded - remove the oldest cached candle
+
+                candles.RemoveFirst();
+            }
         }
     }
 }

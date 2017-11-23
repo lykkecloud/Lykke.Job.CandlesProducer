@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Common.Log;
+using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Settings;
@@ -8,11 +9,11 @@ using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
+    [UsedImplicitly]
     public class CandlesPublisher : ICandlesPublisher
     {
         private readonly ILog _log;
         private readonly CandlesPublicationRabbitSettings _settings;
-
 
         private RabbitMqPublisher<ICandle> _publisher;
 
@@ -38,7 +39,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public Task PublishAsync(ICandle candle)
         {
-            return _publisher.ProduceAsync(CandleMessage.Create(candle));
+            return _publisher.ProduceAsync(CandleMessage.Copy(candle));
         }
 
         public void Dispose()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Lykke.Domain.Prices;
 
 namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
@@ -13,5 +13,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         double Close { get; }
         double High { get; }
         double Low { get; }
+        double TradingVolume { get; }
+        DateTime LastUpdateTimestamp { get; }
     }
 }

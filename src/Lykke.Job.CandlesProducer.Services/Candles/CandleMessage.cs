@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
+    // TODO: Move to the Contract assembly
     public class CandleMessage : ICandle
     {
         [JsonProperty("a")]
@@ -31,7 +32,13 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         [JsonProperty("l")]
         public double Low { get; set; }
 
-        public static CandleMessage Create(ICandle candle)
+        [JsonProperty("tv")]
+        public double TradingVolume { get; set; }
+
+        [JsonProperty("u")]
+        public DateTime LastUpdateTimestamp { get; set; }
+
+        public static CandleMessage Copy(ICandle candle)
         {
             return new CandleMessage
             {
@@ -42,7 +49,9 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 Open = candle.Open,
                 Close = candle.Close,
                 Low = candle.Low,
-                High = candle.High
+                High = candle.High,
+                TradingVolume = candle.TradingVolume,
+                LastUpdateTimestamp = candle.LastUpdateTimestamp
             };
         }
     }
