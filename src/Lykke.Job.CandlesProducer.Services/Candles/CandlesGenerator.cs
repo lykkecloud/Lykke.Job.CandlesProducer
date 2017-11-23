@@ -94,7 +94,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     oldState.Open,
                     quote.Price,
                     Math.Min(oldState.Low, quote.Price),
-                    Math.Max(oldState.Low, quote.Price));
+                    Math.Max(oldState.High, quote.Price));
             }
 
             public bool Equals(Candle other)
