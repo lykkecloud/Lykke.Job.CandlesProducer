@@ -1,13 +1,15 @@
 ﻿namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 {
-    public class CandleMergeResult
+    public class CandleUpdateResult
     {
-        public ICandle Candle { get; }
+        public Candle Candle { get; }
+        public Candle OldCandle { get; }
         public bool WasChanged { get; }
 
-        public CandleMergeResult(ICandle candle, bool wasChanged)
+        public CandleUpdateResult(Candle candle, Candle oldCandle, bool wasChanged)
         {
             Candle = candle;
+            OldCandle = oldCandle;
             WasChanged = wasChanged;
         }
     }

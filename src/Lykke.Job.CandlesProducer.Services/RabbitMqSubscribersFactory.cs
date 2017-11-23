@@ -2,12 +2,14 @@
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
+using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.RabbitMqBroker;
 using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services
 {
+    [PublicAPI]
     public class RabbitMqSubscribersFactory : IRabbitMqSubscribersFactory
     {
         private readonly ILog _log;
