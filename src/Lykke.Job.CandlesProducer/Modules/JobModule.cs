@@ -17,6 +17,7 @@ using Lykke.Job.CandlesProducer.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt;
 using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
 using Lykke.Job.CandlesProducer.Services.Settings;
+using Lykke.Job.CandlesProducer.Services.Trades.Mt;
 using Lykke.Job.CandlesProducer.Services.Trades.Spot;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
@@ -91,7 +92,7 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
                     ? typeof(SpotTradesSubscriber)
-                    : null)
+                    : typeof(MtTradesSubscriber))
                 .As<ITradesSubscriber>()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.TradesSubscription));
