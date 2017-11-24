@@ -4,23 +4,30 @@ using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.CandlesProducer.Core.Services.Trades;
 
 namespace Lykke.Job.CandlesProducer.Services
 {
+    // TODO: Stop MT trades subscriber
+
     public class ShutdownManager : IShutdownManager
     {
         private readonly IQuotesSubscriber _quotesSubscriber;
+        private readonly ITradesSubscriber _tradesSubscriber;
         private readonly ICandlesPublisher _publisher;
         private readonly IEnumerable<ISnapshotSerializer> _snapshotSerializers;
         private readonly ILog _log;
 
         public ShutdownManager(
             IQuotesSubscriber quotesSubscriber,
+            ITradesSubscriber tradesSubscriber,
             ICandlesPublisher publisher,
             IEnumerable<ISnapshotSerializer> snapshotSerializerses,
             ILog log)
         {
             _quotesSubscriber = quotesSubscriber;
+            _tradesSubscriber = tradesSubscriber;
             _publisher = publisher;
             _snapshotSerializers = snapshotSerializerses;
             _log = log;
@@ -31,6 +38,10 @@ namespace Lykke.Job.CandlesProducer.Services
             await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping quotes subscriber...");
 
             _quotesSubscriber.Stop();
+
+            await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping trades subscriber...");
+
+            _tradesSubscriber.Stop();
 
             await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Serializing snapshots async...");
             

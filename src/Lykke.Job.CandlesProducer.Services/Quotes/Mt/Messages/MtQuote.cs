@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Lykke.Job.CandlesProducer.Services.Candles
+namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages
 {
     public class MtQuote
     {

@@ -2,57 +2,37 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AsyncFriendlyStackTrace;
+using Common;
 using Common.Log;
 using Lykke.Domain.Prices;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
+using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using Lykke.RabbitMqBroker;
-using Lykke.RabbitMqBroker.Subscriber;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 
-namespace Lykke.Job.CandlesProducer.Services.Candles
+namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
 {
-    public class QuotesSubscriber : IQuotesSubscriber
+    public class SpotQuotesSubscriber : IQuotesSubscriber
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly string _rabbitConnectionString;
+        private readonly IRabbitMqSubscribersFactory _subscribersFactory;
+        private readonly string _connectionString;
 
-        private RabbitMqSubscriber<IQuote> _subscriber;
+        private IStopable _subscriber;
 
-        public QuotesSubscriber(ILog log, ICandlesManager candlesManager, string rabbitConnectionString)
+        public SpotQuotesSubscriber(ILog log, ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, string connectionString)
         {
             _log = log;
             _candlesManager = candlesManager;
-            _rabbitConnectionString = rabbitConnectionString;
+            _subscribersFactory = subscribersFactory;
+            _connectionString = connectionString;
         }
 
         public void Start()
         {
-            var settings = RabbitMqSubscriptionSettings
-                .CreateForSubscriber(_rabbitConnectionString, "quotefeed", "candlesproducer")
-                .MakeDurable();
-
-            try
-            {
-                _subscriber = new RabbitMqSubscriber<IQuote>(settings, 
-                    new ResilientErrorHandlingStrategy(_log, settings, 
-                        retryTimeout: TimeSpan.FromSeconds(10),
-                        retryNum: 10,
-                        next: new DeadQueueErrorHandlingStrategy(_log, settings)))
-                    .SetMessageDeserializer(new JsonMessageDeserializer<Quote>())
-                    .SetMessageReadStrategy(new MessageReadQueueStrategy())
-                    .Subscribe(ProcessQuoteAsync)
-                    .CreateDefaultBinding()
-                    .SetLogger(_log)
-                    .Start();
-            }
-            catch (Exception ex)
-            {
-                _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(Start), null, ex).Wait();
-                throw;
-            }
+            _subscriber = _subscribersFactory.Create<Quote>(_connectionString, "lykke", "quotefeed", ProcessQuoteAsync);
         }
 
         public void Stop()
@@ -68,7 +48,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 if (validationErrors.Any())
                 {
                     var message = string.Join("\r\n", validationErrors);
-                    await _log.WriteWarningAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), message);
+                    await _log.WriteWarningAsync(nameof(SpotQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), message);
 
                     return;
                 }
@@ -77,7 +57,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
             catch (Exception)
             {
-                await _log.WriteWarningAsync(nameof(QuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "Failed to process quote");
+                await _log.WriteWarningAsync(nameof(SpotQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "Failed to process quote");
                 throw;
             }
         }

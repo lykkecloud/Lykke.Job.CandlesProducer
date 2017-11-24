@@ -9,16 +9,23 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.CandlesProducer.Core.Services.Trades;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
+using Lykke.Job.CandlesProducer.Services.Quotes.Mt;
+using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
 using Lykke.Job.CandlesProducer.Services.Settings;
+using Lykke.Job.CandlesProducer.Services.Trades.Spot;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
+    // TODO: Register MT trades subscriber
+
     public class JobModule : Module
     {
         private readonly IReloadingManager<CandlesProducerSettings> _settings;
@@ -72,13 +79,22 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
 
+            builder.RegisterType<RabbitMqSubscribersFactory>()
+                .As<IRabbitMqSubscribersFactory>();
 
             builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
-                    ? typeof(QuotesSubscriber)
+                    ? typeof(SpotQuotesSubscriber)
                     : typeof(MtQuotesSubscriber))
                 .As<IQuotesSubscriber>()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.QuotesSubscribtion));
+
+            builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
+                    ? typeof(SpotTradesSubscriber)
+                    : null)
+                .As<ITradesSubscriber>()
+                .SingleInstance()
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.TradesSubscription));
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
@@ -108,10 +124,10 @@ namespace Lykke.Job.CandlesProducer.Modules
                 .As<ISnapshotSerializer>();
 
             builder.RegisterType<CandlesGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<IImmutableDictionary<string, ICandle>>>()
+                .As<ISnapshotRepository<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
                 .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager)));
 
-            builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, ICandle>>>()
+            builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
                 .As<ISnapshotSerializer>()
                 .PreserveExistingDefaults();
         }
