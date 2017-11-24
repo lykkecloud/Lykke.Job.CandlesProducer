@@ -1,14 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AzureStorage;
+using Common.Log;
 using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using MessagePack;
-using Newtonsoft.Json;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories
 {
@@ -17,10 +18,12 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
     {
         private const string Key = "CandlesGenerator";
 
+        private readonly ILog _log;
         private readonly IBlobStorage _storage;
 
-        public CandlesGeneratorSnapshotRepository(IBlobStorage storage)
+        public CandlesGeneratorSnapshotRepository(ILog log, IBlobStorage storage)
         {
+            _log = log;
             _storage = storage;
         }
 
@@ -55,8 +58,13 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                     return model.ToImmutableDictionary(i => i.Key, i => i.Value.Cast<ICandle>().ToImmutableList());
                 }
             }
-            catch (JsonSerializationException)
+            catch (InvalidOperationException)
             {
+                await _log.WriteWarningAsync(
+                    nameof(CandlesGeneratorSnapshotRepository),
+                    nameof(TryGetAsync), 
+                    "Failed to deserialize the candles generator snapshot, trying to deserialize it as the legacy format");
+
                 var legacyFormat = await DeserializeLegacyFormat();
 
                 return legacyFormat.ToImmutableDictionary(

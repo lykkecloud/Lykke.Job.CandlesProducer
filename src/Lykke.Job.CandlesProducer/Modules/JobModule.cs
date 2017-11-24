@@ -108,7 +108,7 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<CandlesGenerator>()
                 .As<ICandlesGenerator>()
-                .As<IHaveState<IImmutableDictionary<string, ICandle>>>()
+                .As<IHaveState<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
                 .SingleInstance();
 
             builder.RegisterType<CandlesManager>()
