@@ -102,7 +102,7 @@ namespace Lykke.Job.CandlesProducer
 
                 await startupManager.StartAsync();
 
-                await Log.WriteMonitorAsync("", "", "Started");
+                await Log.WriteMonitorAsync("", $"Env: {Program.EnvInfo}", "Started");
             }
             catch (Exception ex)
             {
@@ -133,7 +133,7 @@ namespace Lykke.Job.CandlesProducer
             {
                 if (Log != null)
                 {
-                    await Log.WriteMonitorAsync("", "", "Terminating");
+                    await Log.WriteMonitorAsync("", $"Env: {Program.EnvInfo}", "Terminating");
                 }
 
                 ApplicationContainer.Dispose();

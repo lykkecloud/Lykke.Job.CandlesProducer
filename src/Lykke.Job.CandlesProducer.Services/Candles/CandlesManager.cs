@@ -7,6 +7,7 @@ using Lykke.Job.CandlesProducer.Core.Domain.Trades;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
@@ -87,6 +88,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 return;
             }
 
+            var changedUpdateResults = new List<CandleUpdateResult>();
+
             foreach (var timeInterval in Constants.PublishedIntervalsHistoryDepth.Keys)
             {
                 var candleUpdateResult = _candlesGenerator.Update(
@@ -99,6 +102,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (candleUpdateResult.WasChanged)
                 {
+                    changedUpdateResults.Add(candleUpdateResult);
+
                     try
                     {
                         await _publisher.PublishAsync(candleUpdateResult.Candle);
@@ -109,7 +114,12 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         // to avoid volume duplication when the trade will be processed again when
                         // subscriber will retry the message
 
-                        _candlesGenerator.Undo(candleUpdateResult);
+                        foreach (var updateResult in changedUpdateResults)
+                        {
+                            _candlesGenerator.Undo(updateResult);
+                        }
+
+                        throw;
                     }
                 }
             }
