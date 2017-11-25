@@ -43,35 +43,16 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 },
                 updateValueFactory: (k, candles) =>
                 {
+                    // Candles is ordered by the Timestamp
+
                     var candleTimestamp = timestamp.TruncateTo(timeInterval);
 
-                    if (candles.Any() && candleTimestamp < candles.First.Value.Timestamp)
-                    {
-                        // Given data is older then oldest of the cached candles.
-                        // Nothing to update here, so just creates the candles from the
-                        // given data and return it.
-
-                        _log.WriteWarningAsync(
-                            nameof(CandlesGenerator),
-                            nameof(Update),
-                            new
-                            {
-                                assetPair = assetPair,
-                                timestamp = timestamp,
-                                price = price,
-                                volume = volume,
-                                oldestCachedCandle = candles.First.Value
-                            }.ToJson(),
-                            "Candle is to old to update. New single tick candle will be returned as the result").Wait();
-
-                        newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
-
-                        return candles;
-                    }
-
-                    // Given data is not older then oldest of the cached candles.
-
-                    for (var item = candles.First; item.Next != null; item = item.Next)
+                    // Common cases:
+                    // 1. lastCandle should be update
+                    // 2. new candle should be added to the tail
+                    // so start search from the end
+                    
+                    for (var item = candles.Last; item != null; item = item.Previous)
                     {
                         var candle = item.Value;
 
@@ -89,25 +70,45 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                         if (candleTimestamp > candle.Timestamp)
                         {
-                            // We don't find candle that matches exactly
-                            // and curent candle is older than given data,
-                            // so insert new candle just before the current candle
+                            // We don't find the candle that matches exactly yet,
+                            // but curent given data is newer than the current candle,
+                            // so insert new candle just after the current candle
 
                             newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
 
-                            candles.AddBefore(item, newCandle);
+                            candles.AddAfter(item, newCandle);
 
                             TruncateTooBigCache(timeInterval, candles);
 
                             return candles;
                         }
+
+                        // Given data is older then the current candle, so
+                        // continue searching of the exactly matched or older candler
                     }
 
-                    // Given data is the newer than the newest cached candle, so add new candle to the tail
+                    // Given data is older then oldest of the cached candles.
+                    // Nothing to update here, so just creates the candles from the
+                    // given data and return it.
+
+                    _log.WriteWarningAsync(
+                        nameof(CandlesGenerator),
+                        nameof(Update),
+                        new
+                        {
+                            assetPair = assetPair,
+                            timestamp = timestamp,
+                            price = price,
+                            volume = volume,
+                            oldestCachedCandle = candles.First.Value
+                        }.ToJson(),
+                        "Candle is to old to update. New single tick candle will be returned as the result").Wait();
 
                     newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
 
-                    candles.AddLast(newCandle);
+                    // Caches the old candle and if the cache is already totally filled, the candle will be evicted immediately
+
+                    candles.AddFirst(newCandle);
 
                     TruncateTooBigCache(timeInterval, candles);
 
