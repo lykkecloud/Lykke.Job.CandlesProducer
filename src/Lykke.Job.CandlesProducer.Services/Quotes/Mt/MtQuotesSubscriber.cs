@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
-using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages;
+using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 {
@@ -31,7 +31,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 
         public void Start()
         {
-            _subscriber = _subscribersFactory.Create<MtQuote>(_connectionString, "lykke.mt", "pricefeed", ProcessQuoteAsync);
+            _subscriber = _subscribersFactory.Create<MtQuoteMessage>(_connectionString, "lykke.mt", "pricefeed", ProcessQuoteAsync);
         }
 
         public void Stop()
@@ -39,7 +39,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
             _subscriber?.Stop();
         }
 
-        private async Task ProcessQuoteAsync(MtQuote quote)
+        private async Task ProcessQuoteAsync(MtQuoteMessage quote)
         {
             try
             {
@@ -54,7 +54,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 
                 if (quote.Bid > 0)
                 {
-                    var bidQuote = new Quote
+                    var bidQuote = new QuoteMessage
                     {
                         AssetPair = quote.Instrument,
                         IsBuy = true,
@@ -71,7 +71,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 
                 if (quote.Ask > 0)
                 {
-                    var askQuote = new Quote
+                    var askQuote = new QuoteMessage
                     {
                         AssetPair = quote.Instrument,
                         IsBuy = false,
@@ -93,7 +93,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
             }
         }
 
-        private static IReadOnlyCollection<string> ValidateQuote(MtQuote quote)
+        private static IReadOnlyCollection<string> ValidateQuote(MtQuoteMessage quote)
         {
             var errors = new List<string>();
 
