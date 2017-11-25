@@ -1,13 +1,13 @@
 ﻿using System;
-using Lykke.Domain.Prices;
+using Lykke.Job.CandlesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 {
     public class Candle : IEquatable<Candle>, ICandle
     {
         public string AssetPairId { get; }
-        public PriceType PriceType { get; }
-        public TimeInterval TimeInterval { get; }
+        public CandlePriceType PriceType { get; }
+        public CandleTimeInterval TimeInterval { get; }
         public DateTime Timestamp { get; }
         public double Open { get; }
         public double Close { get; }
@@ -18,8 +18,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 
         private Candle(
             string assetPairId, 
-            PriceType priceType, 
-            TimeInterval timeInterval, 
+            CandlePriceType priceType, 
+            CandleTimeInterval timeInterval, 
             DateTime timestamp, 
             DateTime lastUpdateTimestamp,
             double open, 
@@ -62,10 +62,10 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             DateTime timestamp,
             double price, 
             double tradingVolume, 
-            PriceType priceType, 
-            TimeInterval timeInterval)
+            CandlePriceType priceType, 
+            CandleTimeInterval timeInterval)
         {
-            var intervalTimestamp = timestamp.RoundTo(timeInterval);
+            var intervalTimestamp = timestamp.TruncateTo(timeInterval);
 
             return new Candle
             (

@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 using Common;
 using Common.Log;
 using JetBrains.Annotations;
-using Lykke.Domain.Prices;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 
@@ -24,7 +24,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             _candles = new ConcurrentDictionary<string, LinkedList<Candle>>();
         }
 
-        public CandleUpdateResult Update(string assetPair, DateTime timestamp, double price, double volume, PriceType priceType, TimeInterval timeInterval)
+        public CandleUpdateResult Update(string assetPair, DateTime timestamp, double price, double volume, CandlePriceType priceType, CandleTimeInterval timeInterval)
         {
             var key = GetKey(assetPair, timeInterval, priceType);
             Candle oldCandle = null;
@@ -43,7 +43,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 },
                 updateValueFactory: (k, candles) =>
                 {
-                    var candleTimestamp = timestamp.RoundTo(timeInterval);
+                    var candleTimestamp = timestamp.TruncateTo(timeInterval);
 
                     if (candles.Any() && candleTimestamp < candles.First.Value.Timestamp)
                     {
@@ -201,12 +201,12 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"Candles count: {state.Sum(i => i.Value.Count)}";
         }
 
-        private static string GetKey(string assetPairId, TimeInterval timeInterval, PriceType priceType)
+        private static string GetKey(string assetPairId, CandleTimeInterval timeInterval, CandlePriceType priceType)
         {
             return $"{assetPairId.Trim().ToUpper()}-{priceType}-{timeInterval}";
         }
 
-        private static void TruncateTooBigCache(TimeInterval timeInterval, LinkedList<Candle> candles)
+        private static void TruncateTooBigCache(CandleTimeInterval timeInterval, LinkedList<Candle> candles)
         {
             if (candles.Count > Constants.PublishedIntervalsHistoryDepth[timeInterval])
             {
