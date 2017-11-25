@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Blob;
@@ -119,14 +120,14 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager)));
+                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
 
             builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
                 .As<ISnapshotSerializer>();
 
             builder.RegisterType<CandlesGeneratorSnapshotRepository>()
                 .As<ISnapshotRepository<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager)));
+                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
 
             builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
                 .As<ISnapshotSerializer>()
