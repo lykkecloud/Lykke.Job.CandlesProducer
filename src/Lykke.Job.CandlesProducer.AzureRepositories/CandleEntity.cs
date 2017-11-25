@@ -1,6 +1,6 @@
 ﻿using System;
 using JetBrains.Annotations;
-using Lykke.Domain.Prices;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using MessagePack;
 
@@ -15,11 +15,11 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         [Key(1)]
-        public PriceType PriceType { get; set; }
+        public CandlePriceType PriceType { get; set; }
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         [Key(2)]
-        public TimeInterval TimeInterval { get; set; }
+        public CandleTimeInterval TimeInterval { get; set; }
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         [Key(3)]

@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Common.Log;
 using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Settings;
@@ -15,7 +16,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         private readonly ILog _log;
         private readonly CandlesPublicationRabbitSettings _settings;
 
-        private RabbitMqPublisher<ICandle> _publisher;
+        private RabbitMqPublisher<CandleMessage> _publisher;
 
         public CandlesPublisher(ILog log, CandlesPublicationRabbitSettings settings)
         {
@@ -29,8 +30,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 .CreateForPublisher(_settings.ConnectionString, _settings.Namespace, "candles")
                 .MakeDurable();
 
-            _publisher = new RabbitMqPublisher<ICandle>(settings)
-                .SetSerializer(new JsonMessageSerializer<ICandle>())
+            _publisher = new RabbitMqPublisher<CandleMessage>(settings)
+                .SetSerializer(new JsonMessageSerializer<CandleMessage>())
                 .SetPublishStrategy(new DefaultFanoutPublishStrategy(settings))
                 .PublishSynchronously()
                 .SetLogger(_log)
@@ -39,7 +40,19 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public Task PublishAsync(ICandle candle)
         {
-            return _publisher.ProduceAsync(CandleMessage.Copy(candle));
+            return _publisher.ProduceAsync(new CandleMessage
+            {
+                AssetPairId = candle.AssetPairId,
+                PriceType = candle.PriceType,
+                TimeInterval = candle.TimeInterval,
+                Timestamp = candle.Timestamp,
+                Open = candle.Open,
+                Close = candle.Close,
+                Low = candle.Low,
+                High = candle.High,
+                TradingVolume = candle.TradingVolume,
+                LastUpdateTimestamp = candle.LastUpdateTimestamp
+            });
         }
 
         public void Dispose()

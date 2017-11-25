@@ -4,12 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
-using Lykke.Domain.Prices;
-using Lykke.Domain.Prices.Contracts;
-using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
 {
@@ -32,7 +30,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
 
         public void Start()
         {
-            _subscriber = _subscribersFactory.Create<Quote>(_connectionString, "lykke", "quotefeed", ProcessQuoteAsync);
+            _subscriber = _subscribersFactory.Create<QuoteMessage>(_connectionString, "lykke", "quotefeed", ProcessQuoteAsync);
         }
 
         public void Stop()
@@ -40,7 +38,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
             _subscriber?.Stop();
         }
 
-        private async Task ProcessQuoteAsync(IQuote quote)
+        private async Task ProcessQuoteAsync(QuoteMessage quote)
         {
             try
             {
@@ -62,7 +60,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
             }
         }
 
-        private static IReadOnlyCollection<string> ValidateQuote(IQuote quote)
+        private static IReadOnlyCollection<string> ValidateQuote(QuoteMessage quote)
         {
             var errors = new List<string>();
 

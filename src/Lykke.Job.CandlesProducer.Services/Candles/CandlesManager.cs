@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Lykke.Domain.Prices;
-using Lykke.Domain.Prices.Contracts;
 using Lykke.Job.CandlesProducer.Core.Domain.Trades;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
+using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
@@ -31,7 +31,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             _publisher = publisher;
         }
 
-        public async Task ProcessQuoteAsync(IQuote quote)
+        public async Task ProcessQuoteAsync(QuoteMessage quote)
         {
             var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(quote.AssetPair);
 
@@ -49,7 +49,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     quote.Timestamp,
                     quote.Price,
                     0,
-                    quote.IsBuy ? PriceType.Bid : PriceType.Ask, 
+                    quote.IsBuy ? CandlePriceType.Bid : CandlePriceType.Ask, 
                     timeInterval);
 
                 var tasks = new List<Task>();
@@ -66,7 +66,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         midPriceQuote.Timestamp,
                         midPriceQuote.Price,
                         0,
-                        PriceType.Mid, 
+                        CandlePriceType.Mid, 
                         timeInterval);
 
                     if (midPriceCandleUpdateResult.WasChanged)
@@ -97,7 +97,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     trade.Timestamp,
                     trade.Price,
                     trade.Volume,
-                    trade.Type == TradeType.Buy ? PriceType.Ask : PriceType.Bid,
+                    trade.Type == TradeType.Buy ? CandlePriceType.Ask : CandlePriceType.Bid,
                     timeInterval);
 
                 if (candleUpdateResult.WasChanged)

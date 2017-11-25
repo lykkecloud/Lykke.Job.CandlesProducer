@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Lykke.Domain.Prices.Contracts;
-using Lykke.Domain.Prices.Model;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
+using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
@@ -62,7 +61,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"Assets count: {state.Count}";
         }
 
-        public IQuote TryGenerate(IQuote quote, int assetPairAccuracy)
+        public QuoteMessage TryGenerate(QuoteMessage quote, int assetPairAccuracy)
         {
             var assetPairId = quote.AssetPair.Trim().ToUpper();
 
@@ -78,11 +77,11 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return TryCreateMidQuote(assetPairId, newState, assetPairAccuracy);
         }
 
-        private static IQuote TryCreateMidQuote(string assetPairId, IMarketState marketState, int assetPairAccuracy)
+        private static QuoteMessage TryCreateMidQuote(string assetPairId, IMarketState marketState, int assetPairAccuracy)
         {
             if (marketState.Bid != null && marketState.Ask != null)
             {
-                return new Quote
+                return new QuoteMessage
                 {
                     AssetPair = assetPairId,
                     Price = Math.Round((marketState.Ask.Price + marketState.Bid.Price) / 2, assetPairAccuracy),
