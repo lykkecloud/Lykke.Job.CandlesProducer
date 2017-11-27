@@ -78,7 +78,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                             candles.AddAfter(item, newCandle);
 
-                            TruncateTooBigCache(timeInterval, candles);
+                            PruneCache(candles);
 
                             return candles;
                         }
@@ -196,13 +196,19 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"{assetPairId.Trim().ToUpper()}-{priceType}-{timeInterval}";
         }
 
-        private static void TruncateTooBigCache(CandleTimeInterval timeInterval, LinkedList<Candle> candles)
+        private static void PruneCache(LinkedList<Candle> candles)
         {
-            if (candles.Count > Constants.PublishedIntervalsHistoryDepth[timeInterval])
-            {
-                // Cached candles count limit is exceeded - remove the oldest cached candle
+            // Stores 1 day at least and not less than 2 candles for bigger intervals, 
+            // to let quotes and trades meet each other in the candles cache
 
-                candles.RemoveFirst();
+            if (candles.Count > 2)
+            {
+                var depth = candles.Last.Value.Timestamp - candles.First.Value.Timestamp;
+
+                if (depth > TimeSpan.FromDays(1))
+                {
+                    candles.RemoveFirst();
+                }
             }
         }
     }
