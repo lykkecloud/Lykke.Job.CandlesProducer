@@ -42,7 +42,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
             var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(quote, assetPair.Accuracy);
 
-            foreach (var timeInterval in Constants.PublishedIntervalsHistoryDepth.Keys)
+            foreach (var timeInterval in Constants.PublishedIntervals)
             {
                 var candleUpdateResult = _candlesGenerator.Update(
                     quote.AssetPair,
@@ -90,7 +90,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
             var changedUpdateResults = new List<CandleUpdateResult>();
 
-            foreach (var timeInterval in Constants.PublishedIntervalsHistoryDepth.Keys)
+            foreach (var timeInterval in Constants.PublishedIntervals)
             {
                 var candleUpdateResult = _candlesGenerator.Update(
                     trade.AssetPair,
