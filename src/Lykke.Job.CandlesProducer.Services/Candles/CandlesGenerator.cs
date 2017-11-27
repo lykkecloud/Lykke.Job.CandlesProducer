@@ -78,7 +78,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                             candles.AddAfter(item, newCandle);
 
-                            TruncateTooBigCache(timeInterval, candles);
+                            PruneCache(candles);
 
                             return candles;
                         }
@@ -88,8 +88,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     }
 
                     // Given data is older then oldest of the cached candles.
-                    // Nothing to update here, so just creates the candles from the
-                    // given data and return it.
+                    // Nothing to update here and no candle can be returned
+                    // since we can't obtain full candle state
 
                     _log.WriteWarningAsync(
                         nameof(CandlesGenerator),
@@ -102,25 +102,14 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                             volume = volume,
                             oldestCachedCandle = candles.First.Value
                         }.ToJson(),
-                        "Candle is to old to update. New single tick candle will be returned as the result").Wait();
-
-                    newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
-
-                    // Caches the old candle and if the cache is already totally filled, the candle will be evicted immediately
-
-                    candles.AddFirst(newCandle);
-
-                    TruncateTooBigCache(timeInterval, candles);
+                        "Incoming data is to old to update the candle. No candle will be generated").Wait();
 
                     return candles;
                 });
 
-            if (newCandle == null)
-            {
-                throw new InvalidOperationException("Now candle was created");
-            }
-
-            return new CandleUpdateResult(newCandle, oldCandle, !newCandle.Equals(oldCandle));
+            return newCandle == null ? 
+                CandleUpdateResult.Empty : 
+                new CandleUpdateResult(newCandle, oldCandle, !newCandle.Equals(oldCandle));
         }
 
         public void Undo(CandleUpdateResult candleUpdateResult)
@@ -207,13 +196,19 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"{assetPairId.Trim().ToUpper()}-{priceType}-{timeInterval}";
         }
 
-        private static void TruncateTooBigCache(CandleTimeInterval timeInterval, LinkedList<Candle> candles)
+        private static void PruneCache(LinkedList<Candle> candles)
         {
-            if (candles.Count > Constants.PublishedIntervalsHistoryDepth[timeInterval])
-            {
-                // Cached candles count limit is exceeded - remove the oldest cached candle
+            // Stores 1 day at least and not less than 2 candles for bigger intervals, 
+            // to let quotes and trades meet each other in the candles cache
 
-                candles.RemoveFirst();
+            if (candles.Count > 2)
+            {
+                var depth = candles.Last.Value.Timestamp - candles.First.Value.Timestamp;
+
+                if (depth > TimeSpan.FromDays(1))
+                {
+                    candles.RemoveFirst();
+                }
             }
         }
     }
