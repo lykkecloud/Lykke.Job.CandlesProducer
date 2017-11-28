@@ -49,6 +49,10 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         [Key(9)]
         public DateTime LastUpdateTimestamp { get; set; }
 
+        [UsedImplicitly(ImplicitUseKindFlags.Assign)]
+        [Key(10)]
+        public DateTime OpenTimestamp { get; set; }
+
         double ICandle.Open => (double) Open;
 
         double ICandle.Close => (double) Close;
@@ -72,7 +76,8 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 Low = (decimal) candle.Low,
                 High = (decimal) candle.High,
                 TradingVolume = (decimal) candle.TradingVolume,
-                LastUpdateTimestamp = candle.LastUpdateTimestamp
+                LastUpdateTimestamp = candle.LastUpdateTimestamp,
+                OpenTimestamp = candle.OpenTimestamp
             };
         }
     }
