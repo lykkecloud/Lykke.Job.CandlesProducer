@@ -35,13 +35,13 @@ namespace Lykke.Job.CandlesProducer.Services
 
         public async Task ShutdownAsync()
         {
-            await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping quotes subscriber...");
-
-            _quotesSubscriber.Stop();
-
             await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping trades subscriber...");
 
             _tradesSubscriber.Stop();
+
+            await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping quotes subscriber...");
+
+            _quotesSubscriber.Stop();
 
             await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Serializing snapshots async...");
             
