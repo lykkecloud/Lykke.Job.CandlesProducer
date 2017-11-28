@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lykke.Job.CandlesProducer.Core.Domain.Trades;
@@ -35,73 +34,58 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public async Task ProcessQuoteAsync(QuoteMessage quote)
         {
-            var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(quote.AssetPair);
-
-            if (assetPair == null)
-            {
-                return;
-            }
-
-            var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(
-                quote.AssetPair,
-                quote.IsBuy,
-                quote.Price, quote.Timestamp, assetPair.Accuracy);
-            var changedUpdateResults = new ConcurrentBag<CandleUpdateResult>();
-            var tasks = Constants
-                .PublishedIntervals
-                .Select(timeInterval => Task.Factory.StartNew(() =>
-                {
-                    ProcessInterval(
-                        quote.AssetPair,
-                        quote.Timestamp,
-                        quote.Price,
-                        0,
-                        quote.IsBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
-                        timeInterval,
-                        midPriceQuote,
-                        changedUpdateResults);
-                }));
-
-            await ExecuteProcessingTasksAsync(tasks, changedUpdateResults);
+            await ProcessMessage(quote.AssetPair, quote.Timestamp, quote.Price, 0, quote.IsBuy);
         }
 
         public async Task ProcessTradeAsync(Trade trade)
         {
-            var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(trade.AssetPair);
+            await ProcessMessage(trade.AssetPair, trade.Timestamp, trade.Price, trade.Volume, trade.Type == TradeType.Buy);
+        }
+
+        private async Task ProcessMessage(string assetPairId, DateTime timestamp, double price, double tradingVolume, bool isBuy)
+        {
+            var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(assetPairId);
 
             if (assetPair == null)
             {
                 return;
             }
 
-            var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(
-                trade.AssetPair,
-                trade.Type == TradeType.Buy, 
-                trade.Price, trade.Timestamp, assetPair.Accuracy);
             var changedUpdateResults = new ConcurrentBag<CandleUpdateResult>();
-            var tasks = Constants
-                .PublishedIntervals
-                .Select(timeInterval => Task.Factory.StartNew(() =>
-                {
-                    ProcessInterval(
-                        trade.AssetPair,
-                        trade.Timestamp,
-                        trade.Price,
-                        trade.Volume,
-                        trade.Type == TradeType.Buy ? CandlePriceType.Ask : CandlePriceType.Bid,
-                        timeInterval,
-                        midPriceQuote,
-                        changedUpdateResults);
-                }));
+            var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(
+                assetPairId,
+                isBuy,
+                price, 
+                timestamp, 
+                assetPair.Accuracy);
 
-            await ExecuteProcessingTasksAsync(tasks, changedUpdateResults);
-        }
-
-        private async Task ExecuteProcessingTasksAsync(IEnumerable<Task> tasks, ConcurrentBag<CandleUpdateResult> changedUpdateResults)
-        {
             try
             {
-                await Task.WhenAll(tasks);
+                // Updates all intervals in parallel
+
+                var processingTasks = Constants
+                    .PublishedIntervals
+                    .Select(timeInterval => Task.Factory.StartNew(() =>
+                    {
+                        ProcessInterval(
+                            assetPairId,
+                            timestamp,
+                            price,
+                            tradingVolume,
+                            isBuy,
+                            timeInterval,
+                            midPriceQuote,
+                            changedUpdateResults);
+                    }));
+
+                await Task.WhenAll(processingTasks);
+
+                // Publishes updated candles
+
+                foreach (var changedUpdateResult in changedUpdateResults)
+                {
+                    await _publisher.PublishAsync(changedUpdateResult.Candle);
+                }
             }
             catch (Exception)
             {
@@ -121,25 +105,27 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             DateTime timestamp,
             double price,
             double tradingVolume,
-            CandlePriceType priceType,
+            bool isBuy,
             CandleTimeInterval timeInterval,
             QuoteMessage midPriceQuote,
             ConcurrentBag<CandleUpdateResult> changedUpdateResults)
         {
+            // Updates ask/bid candle
+
             var candleUpdateResult = _candlesGenerator.Update(
                 assetPair,
                 timestamp,
                 price,
                 tradingVolume,
-                priceType,
+                isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
                 timeInterval);
 
             if (candleUpdateResult.WasChanged)
             {
                 changedUpdateResults.Add(candleUpdateResult);
-
-                _publisher.PublishAsync(candleUpdateResult.Candle);
             }
+
+            // Updates mid candle
 
             if (midPriceQuote != null)
             {
@@ -154,8 +140,6 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 if (midPriceCandleUpdateResult.WasChanged)
                 {
                     changedUpdateResults.Add(midPriceCandleUpdateResult);
-
-                    _publisher.PublishAsync(midPriceCandleUpdateResult.Candle);
                 }
             }
         }
