@@ -40,19 +40,22 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public Task PublishAsync(ICandle candle)
         {
-            return _publisher.ProduceAsync(new CandleMessage
+            lock (_publisher)
             {
-                AssetPairId = candle.AssetPairId,
-                PriceType = candle.PriceType,
-                TimeInterval = candle.TimeInterval,
-                Timestamp = candle.Timestamp,
-                Open = candle.Open,
-                Close = candle.Close,
-                Low = candle.Low,
-                High = candle.High,
-                TradingVolume = candle.TradingVolume,
-                LastUpdateTimestamp = candle.LastUpdateTimestamp
-            });
+                return _publisher.ProduceAsync(new CandleMessage
+                {
+                    AssetPairId = candle.AssetPairId,
+                    PriceType = candle.PriceType,
+                    TimeInterval = candle.TimeInterval,
+                    Timestamp = candle.Timestamp,
+                    Open = candle.Open,
+                    Close = candle.Close,
+                    Low = candle.Low,
+                    High = candle.High,
+                    TradingVolume = candle.TradingVolume,
+                    LastUpdateTimestamp = candle.LastUpdateTimestamp
+                });
+            }
         }
 
         public void Dispose()
