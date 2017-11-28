@@ -15,6 +15,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double Low { get; }
         public double TradingVolume { get; }
         public DateTime LastUpdateTimestamp { get; }
+        public DateTime OpenTimestamp { get; }
 
         private Candle(
             string assetPairId, 
@@ -22,6 +23,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             CandleTimeInterval timeInterval, 
             DateTime timestamp, 
             DateTime lastUpdateTimestamp,
+            DateTime openTimestamp,
             double open, 
             double close, 
             double low, 
@@ -33,6 +35,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             TimeInterval = timeInterval;
             Timestamp = timestamp;
             LastUpdateTimestamp = lastUpdateTimestamp;
+            OpenTimestamp = openTimestamp;
             Open = open;
             Close = close;
             Low = low;
@@ -49,6 +52,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.TimeInterval,
                 candle.Timestamp,
                 candle.LastUpdateTimestamp,
+                candle.OpenTimestamp,
                 candle.Open,
                 candle.Close,
                 candle.Low,
@@ -74,6 +78,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 timeInterval,
                 intervalTimestamp,
                 timestamp,
+                timestamp,
                 price,
                 price,
                 price,
@@ -84,31 +89,42 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 
         public Candle Update(DateTime timestamp, double price, double tradingVolume)
         {
+            double closePrice;
+            double openPrice;
+            DateTime lastTimestamp;
+            DateTime openTimestamp;
+
             if (LastUpdateTimestamp < timestamp)
             {
-                return new Candle(
-                    AssetPairId,
-                    PriceType,
-                    TimeInterval,
-                    Timestamp,
-                    timestamp,
-                    Open,
-                    price,
-                    Math.Min(Low, price),
-                    Math.Max(High, price),
-                    TradingVolume + tradingVolume);
+                closePrice = price;
+                lastTimestamp = timestamp;
+            }
+            else
+            {
+                closePrice = Close;
+                lastTimestamp = LastUpdateTimestamp;
             }
 
-            // If candle was already updated with more recent data, close price shouldn't be updated
+            if (OpenTimestamp > timestamp)
+            {
+                openPrice = price;
+                openTimestamp = timestamp;
+            }
+            else
+            {
+                openPrice = Open;
+                openTimestamp = OpenTimestamp;
+            }
 
             return new Candle(
                 AssetPairId,
                 PriceType,
                 TimeInterval,
                 Timestamp,
-                timestamp,
-                Open,
-                Close,
+                lastTimestamp,
+                openTimestamp,
+                openPrice,
+                closePrice,
                 Math.Min(Low, price),
                 Math.Max(High, price),
                 TradingVolume + tradingVolume);
@@ -122,6 +138,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 TimeInterval,
                 Timestamp,
                 LastUpdateTimestamp,
+                OpenTimestamp,
                 Open,
                 Close,
                 Low,
