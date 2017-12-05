@@ -1,11 +1,12 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Contract;
 using Newtonsoft.Json;
 
-namespace Lykke.Job.CandlesProducer.Contract
+namespace Lykke.Job.CandlesProducer.Services.Candles.LegacyContract
 {
     [PublicAPI]
-    public class CandleMessage
+    public class CandleMessageV1
     {
         [JsonProperty("a")]
         public string AssetPairId { get; set; }

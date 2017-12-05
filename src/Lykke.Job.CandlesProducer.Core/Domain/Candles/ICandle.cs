@@ -14,7 +14,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         double High { get; }
         double Low { get; }
         double TradingVolume { get; }
-        DateTime LastUpdateTimestamp { get; }
+        DateTime LatestChangeTimestamp { get; }
         DateTime OpenTimestamp { get; }
     }
 }

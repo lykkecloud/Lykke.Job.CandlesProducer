@@ -51,7 +51,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 return;
             }
 
-            var changedUpdateResults = new ConcurrentBag<CandleUpdateResult>();
+            var changedUpdates = new ConcurrentBag<CandleUpdateResult>();
             var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(
                 assetPairId,
                 isBuy,
@@ -75,23 +75,20 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                             isBuy,
                             timeInterval,
                             midPriceQuote,
-                            changedUpdateResults);
+                            changedUpdates);
                     }));
 
                 await Task.WhenAll(processingTasks);
 
                 // Publishes updated candles
 
-                foreach (var changedUpdateResult in changedUpdateResults)
-                {
-                    await _publisher.PublishAsync(changedUpdateResult.Candle);
-                }
+                await _publisher.PublishAsync(changedUpdates);
             }
             catch (Exception)
             {
                 // Failed to publish one or several candles, so processing should be cancelled
 
-                foreach (var updateResult in changedUpdateResults)
+                foreach (var updateResult in changedUpdates)
                 {
                     _candlesGenerator.Undo(updateResult);
                 }
