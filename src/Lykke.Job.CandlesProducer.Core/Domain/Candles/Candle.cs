@@ -14,7 +14,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double High { get; }
         public double Low { get; }
         public double TradingVolume { get; }
-        public DateTime LastUpdateTimestamp { get; }
+        public DateTime LatestChangeTimestamp { get; }
         public DateTime OpenTimestamp { get; }
 
         private Candle(
@@ -22,7 +22,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             CandlePriceType priceType, 
             CandleTimeInterval timeInterval, 
             DateTime timestamp, 
-            DateTime lastUpdateTimestamp,
+            DateTime latestChangeTimestamp,
             DateTime openTimestamp,
             double open, 
             double close, 
@@ -34,7 +34,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             PriceType = priceType;
             TimeInterval = timeInterval;
             Timestamp = timestamp;
-            LastUpdateTimestamp = lastUpdateTimestamp;
+            LatestChangeTimestamp = latestChangeTimestamp;
             OpenTimestamp = openTimestamp;
             Open = open;
             Close = close;
@@ -51,7 +51,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.PriceType,
                 candle.TimeInterval,
                 candle.Timestamp,
-                candle.LastUpdateTimestamp,
+                candle.LatestChangeTimestamp,
                 candle.OpenTimestamp,
                 candle.Open,
                 candle.Close,
@@ -91,18 +91,18 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         {
             double closePrice;
             double openPrice;
-            DateTime lastTimestamp;
+            DateTime changeTimestamp;
             DateTime openTimestamp;
 
-            if (LastUpdateTimestamp < timestamp)
+            if (LatestChangeTimestamp < timestamp)
             {
                 closePrice = price;
-                lastTimestamp = timestamp;
+                changeTimestamp = timestamp;
             }
             else
             {
                 closePrice = Close;
-                lastTimestamp = LastUpdateTimestamp;
+                changeTimestamp = LatestChangeTimestamp;
             }
 
             if (OpenTimestamp > timestamp)
@@ -121,7 +121,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 PriceType,
                 TimeInterval,
                 Timestamp,
-                lastTimestamp,
+                changeTimestamp,
                 openTimestamp,
                 openPrice,
                 closePrice,
@@ -137,7 +137,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 PriceType,
                 TimeInterval,
                 Timestamp,
-                LastUpdateTimestamp,
+                LatestChangeTimestamp,
                 OpenTimestamp,
                 Open,
                 Close,
@@ -161,7 +161,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                    PriceType == other.PriceType &&
                    TimeInterval == other.TimeInterval &&
                    Timestamp.Equals(other.Timestamp) &&
-                   LastUpdateTimestamp.Equals(other.LastUpdateTimestamp) &&
+                   LatestChangeTimestamp.Equals(other.LatestChangeTimestamp) &&
                    Open.Equals(other.Open) &&
                    Close.Equals(other.Close) &&
                    High.Equals(other.High) &&
@@ -194,7 +194,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 hashCode = (hashCode * 397) ^ (int)PriceType;
                 hashCode = (hashCode * 397) ^ (int)TimeInterval;
                 hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
-                hashCode = (hashCode * 397) ^ LastUpdateTimestamp.GetHashCode();
+                hashCode = (hashCode * 397) ^ LatestChangeTimestamp.GetHashCode();
                 hashCode = (hashCode * 397) ^ Open.GetHashCode();
                 hashCode = (hashCode * 397) ^ Close.GetHashCode();
                 hashCode = (hashCode * 397) ^ High.GetHashCode();

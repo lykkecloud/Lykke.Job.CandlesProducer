@@ -26,8 +26,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
-    // TODO: Register MT trades subscriber
-
     public class JobModule : Module
     {
         private readonly IReloadingManager<CandlesProducerSettings> _settings;
@@ -83,6 +81,9 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<RabbitMqSubscribersFactory>()
                 .As<IRabbitMqSubscribersFactory>();
+
+            builder.RegisterType<RabbitMqPublishersFactory>()
+                .As<IRabbitMqPublishersFactory>();
 
             builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
                     ? typeof(SpotQuotesSubscriber)

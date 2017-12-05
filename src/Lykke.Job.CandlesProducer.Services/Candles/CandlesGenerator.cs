@@ -29,6 +29,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             var key = GetKey(assetPair, timeInterval, priceType);
             Candle oldCandle = null;
             Candle newCandle = null;
+            var isLatestCandle = false;
 
             _candles.AddOrUpdate(key,
                 addValueFactory: k =>
@@ -36,9 +37,10 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     var candles = new LinkedList<Candle>();
 
                     newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+                    isLatestCandle = true;
 
                     candles.AddFirst(newCandle);
-
+                    
                     return candles;
                 },
                 updateValueFactory: (k, candles) =>
@@ -62,6 +64,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                             oldCandle = item.Value;
                             newCandle = oldCandle.Update(timestamp, price, volume);
+                            isLatestCandle = item == candles.Last;
 
                             item.Value = newCandle;
 
@@ -75,6 +78,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                             // so insert new candle just after the current candle
 
                             newCandle = Candle.Create(assetPair, timestamp, price, volume, priceType, timeInterval);
+                            isLatestCandle = item == candles.Last;
 
                             candles.AddAfter(item, newCandle);
 
@@ -87,7 +91,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         // continue searching of the exactly matched or older candler
                     }
 
-                    // Given data is older then oldest of the cached candles.
+                    // Given data is older then the oldest of the cached candles.
 
                     if (ShouldBeCached(candles, timestamp))
                     {
@@ -119,9 +123,14 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     return candles;
                 });
 
-            return newCandle == null ? 
-                CandleUpdateResult.Empty : 
-                new CandleUpdateResult(newCandle, oldCandle, !newCandle.Equals(oldCandle));
+            return newCandle == null
+                ? CandleUpdateResult.Empty
+                : new CandleUpdateResult(
+                    newCandle,
+                    oldCandle,
+                    wasChanged: !newCandle.Equals(oldCandle),
+                    isLatestCandle: isLatestCandle,
+                    isLatestChange: oldCandle == null || newCandle.LatestChangeTimestamp >= oldCandle.LatestChangeTimestamp);
         }
 
         public void Undo(CandleUpdateResult candleUpdateResult)
@@ -148,7 +157,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                         if (cachedCandle.Timestamp == candle.Timestamp)
                         {
-                            if (cachedCandle.LastUpdateTimestamp == candle.LastUpdateTimestamp)
+                            if (cachedCandle.LatestChangeTimestamp == candle.LatestChangeTimestamp)
                             {
                                 // Candle wasn't changed between Update and Undo call, so we can just revert to the old candle
 
