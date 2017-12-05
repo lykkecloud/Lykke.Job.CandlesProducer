@@ -47,7 +47,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         [Key(9)]
-        public DateTime LastUpdateTimestamp { get; set; }
+        public DateTime LatestChangeTimestamp { get; set; }
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         [Key(10)]
@@ -76,7 +76,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 Low = (decimal) candle.Low,
                 High = (decimal) candle.High,
                 TradingVolume = (decimal) candle.TradingVolume,
-                LastUpdateTimestamp = candle.LastUpdateTimestamp,
+                LatestChangeTimestamp = candle.LatestChangeTimestamp,
                 OpenTimestamp = candle.OpenTimestamp
             };
         }
