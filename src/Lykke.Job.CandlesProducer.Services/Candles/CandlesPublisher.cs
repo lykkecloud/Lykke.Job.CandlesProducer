@@ -83,7 +83,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 return _publisher.ProduceAsync(new CandlesUpdatedEvent
                 {
-                    ContractVersion = typeof(CandlesUpdatedEvent).Assembly.GetName().Version,
+                    ContractVersion = Contract.Constants.ContractVersion,
                     UpdateTimestamp = DateTime.UtcNow,
                     Candles = updates
                         .Select(c => new CandleUpdate
