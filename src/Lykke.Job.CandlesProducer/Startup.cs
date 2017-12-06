@@ -13,6 +13,7 @@ using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
 using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Logs;
+using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
@@ -182,6 +183,10 @@ namespace Lykke.Job.CandlesProducer
 
                 aggregateLogger.AddLog(azureStorageLogger);
             }
+
+            var logToSlack = LykkeLogToSlack.Create(slackService, "Prices");
+
+            aggregateLogger.AddLog(logToSlack);
 
             return aggregateLogger;
         }
