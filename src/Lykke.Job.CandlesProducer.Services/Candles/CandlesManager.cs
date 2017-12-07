@@ -82,7 +82,10 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 // Publishes updated candles
 
-                await _publisher.PublishAsync(changedUpdates);
+                if (!changedUpdates.IsEmpty)
+                {
+                    await _publisher.PublishAsync(changedUpdates);
+                }
             }
             catch (Exception)
             {
