@@ -39,12 +39,12 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
 
             var trades = message
                 .Trades
-                .Where(t => t.MarketVolume > 0)
                 .Select(t => new Trade(
                     message.Order.AssetPairId,
+                    message.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                     t.Timestamp,
                     t.Price,
-                    t.MarketVolume
+                    message.Order.Volume > 0 ? t.MarketVolume : t.LimitVolume
                 ));
              
             foreach (var trade in trades)
@@ -62,12 +62,12 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
 
             var trades = message.Orders
                 .SelectMany(o => o.Trades
-                    .Where(t => t.Volume > 0)
                     .Select(t => new Trade(
                         o.Order.AssetPairId,
+                        o.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                         t.Timestamp,
                         t.Price,
-                        t.Volume
+                        o.Order.Volume > 0 ? t.Volume : t.OppositeVolume
                     )));
 
             foreach (var trade in trades)

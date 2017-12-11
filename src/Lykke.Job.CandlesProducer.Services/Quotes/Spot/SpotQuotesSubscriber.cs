@@ -66,7 +66,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
 
             if (quote == null)
             {
-                errors.Add("Argument 'Order' is null.");
+                errors.Add("Quote is null.");
             }
             else
             {

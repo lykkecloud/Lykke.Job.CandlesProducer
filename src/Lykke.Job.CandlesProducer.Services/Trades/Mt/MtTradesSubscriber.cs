@@ -31,6 +31,7 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
         {
             var trade = new Trade(
                 message.AssetPairId,
+                message.Type == MtTradeMessage.TradeType.Buy ? TradeType.Buy : TradeType.Sell,
                 message.Date,
                 (double) message.Price,
                 (double) message.Volume);

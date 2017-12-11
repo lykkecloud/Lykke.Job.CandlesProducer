@@ -10,11 +10,11 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Trades
         public double Price { get; }
         public double Volume { get; }
 
-        public Trade(string assetPair, DateTime timestamp, double price, double volume)
+        public Trade(string assetPair, TradeType type, DateTime timestamp, double price, double volume)
         {
             AssetPair = assetPair;
             Timestamp = timestamp;
-            Type = volume > 0 ? TradeType.Buy : TradeType.Sell;
+            Type = type;
             Price = price;
             Volume = Math.Abs(volume);
         }
