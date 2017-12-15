@@ -1,24 +1,26 @@
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
-using Lykke.Domain.Prices;
+using Lykke.Job.CandlesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
-    public class Constants
+    public static class Constants
     {
-        public static readonly ImmutableArray<TimeInterval> PublishedIntervals = ImmutableArray.Create
-        (
-            TimeInterval.Sec,
-            TimeInterval.Minute,
-            TimeInterval.Min5,
-            TimeInterval.Min15,
-            TimeInterval.Min30,
-            TimeInterval.Hour,
-            TimeInterval.Hour4,
-            TimeInterval.Hour6,
-            TimeInterval.Hour12,
-            TimeInterval.Day,
-            TimeInterval.Week,
-            TimeInterval.Month
-        );
+        public static readonly HashSet<CandleTimeInterval> PublishedIntervals =
+            new HashSet<CandleTimeInterval>
+            {
+                CandleTimeInterval.Sec,
+                CandleTimeInterval.Minute,
+                CandleTimeInterval.Min5,
+                CandleTimeInterval.Min15,
+                CandleTimeInterval.Min30,
+                CandleTimeInterval.Hour,
+                CandleTimeInterval.Hour4,
+                CandleTimeInterval.Hour6,
+                CandleTimeInterval.Hour12,
+                CandleTimeInterval.Day,
+                CandleTimeInterval.Week,
+                CandleTimeInterval.Month
+            };
     }
 }

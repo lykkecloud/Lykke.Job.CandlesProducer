@@ -4,6 +4,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
 using Common.Log;
+using JetBrains.Annotations;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
@@ -12,6 +13,7 @@ using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
 using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Logs;
+using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
@@ -21,12 +23,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lykke.Job.CandlesProducer
 {
+    [UsedImplicitly]
     public class Startup
     {
-        public IHostingEnvironment Environment { get; }
-        public IContainer ApplicationContainer { get; private set; }
-        public IConfigurationRoot Configuration { get; }
-        public ILog Log { get; private set; }
+        private IContainer ApplicationContainer { get; set; }
+        private IConfigurationRoot Configuration { get; }
+        private ILog Log { get; set; }
 
         public Startup(IHostingEnvironment env)
         {
@@ -35,9 +37,9 @@ namespace Lykke.Job.CandlesProducer
                 .AddEnvironmentVariables();
 
             Configuration = builder.Build();
-            Environment = env;
         }
 
+        [UsedImplicitly]
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
             services.AddMvc()
@@ -64,7 +66,11 @@ namespace Lykke.Job.CandlesProducer
                 appSettings.CurrentValue.SlackNotifications,
                 jobSettings.ConnectionString(x => x.Db.LogsConnString));
             
-            builder.RegisterModule(new JobModule(jobSettings, appSettings.Nested(x => x.Assets), quotesSourceType, Log));
+            builder.RegisterModule(new JobModule(
+                jobSettings.CurrentValue, 
+                jobSettings.Nested(x => x.Db), 
+                appSettings.CurrentValue.Assets,
+                quotesSourceType, Log));
 
             builder.Populate(services);
 
@@ -73,6 +79,7 @@ namespace Lykke.Job.CandlesProducer
             return new AutofacServiceProvider(ApplicationContainer);
         }
 
+        [UsedImplicitly]
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime appLifetime)
         {
             if (env.IsDevelopment())
@@ -180,6 +187,10 @@ namespace Lykke.Job.CandlesProducer
 
                 aggregateLogger.AddLog(azureStorageLogger);
             }
+
+            var logToSlack = LykkeLogToSlack.Create(slackService, "Prices");
+
+            aggregateLogger.AddLog(logToSlack);
 
             return aggregateLogger;
         }

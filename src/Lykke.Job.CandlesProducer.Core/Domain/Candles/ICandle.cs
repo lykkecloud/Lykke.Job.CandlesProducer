@@ -1,17 +1,21 @@
+﻿using Lykke.Job.CandlesProducer.Contract;
 using System;
-using Lykke.Domain.Prices;
 
 namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 {
     public interface ICandle
     {
         string AssetPairId { get; }
-        PriceType PriceType { get; }
-        TimeInterval TimeInterval { get; }
+        CandlePriceType PriceType { get; }
+        CandleTimeInterval TimeInterval { get; }
         DateTime Timestamp { get; }
         double Open { get; }
         double Close { get; }
         double High { get; }
         double Low { get; }
+        double TradingVolume { get; }
+        DateTime LatestChangeTimestamp { get; }
+        DateTime OpenTimestamp { get; }
+        bool HasPrices { get; }
     }
 }

@@ -1,5 +1,4 @@
-using System;
-using Lykke.Domain.Prices.Model;
+﻿using System;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Candles;
 using Xunit;
@@ -23,8 +22,8 @@ namespace Lykke.Job.CandlesProducer.Tests
             var date2 = new DateTime(2017, 06, 23, 12, 56, 30);
 
             // Act
-            _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = date1 }, 3);
-            var mid = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 2, Timestamp = date2 }, 3);
+            _generator.TryGenerate("EURUSD", false, 1, date1, 3);
+            var mid = _generator.TryGenerate("EURUSD", true, 2, date2, 3);
 
             // Assert
             Assert.NotNull(mid);
@@ -45,10 +44,10 @@ namespace Lykke.Job.CandlesProducer.Tests
             var date4 = new DateTime(2017, 06, 23, 12, 58, 00);
 
             // Act
-            _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = date1 }, 3);
-            _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 2, Timestamp = date2 }, 3);
-            var mid2 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 3, Timestamp = date3 }, 3);
-            var mid3 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 2, Timestamp = date4 }, 3);
+            _generator.TryGenerate("EURUSD", false, 1, date1, 3);
+            _generator.TryGenerate("EURUSD", true, 2, date2, 3);
+            var mid2 = _generator.TryGenerate("EURUSD", true, 3, date3, 3);
+            var mid3 = _generator.TryGenerate("EURUSD", false, 2, date4, 3);
 
             // Assert
             Assert.NotNull(mid2);
@@ -68,8 +67,8 @@ namespace Lykke.Job.CandlesProducer.Tests
         public void Mid_quote_price_is_rounded()
         {
             // Act
-            _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1.123, Timestamp = DateTime.UtcNow }, 2);
-            var mid = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 2, Timestamp = DateTime.UtcNow }, 2);
+            _generator.TryGenerate("EURUSD", false, 1.123, DateTime.UtcNow, 2);
+            var mid = _generator.TryGenerate("EURUSD", true, 2, DateTime.UtcNow, 2);
 
             // Assert
             Assert.Equal(1.56, mid.Price);
@@ -79,9 +78,9 @@ namespace Lykke.Job.CandlesProducer.Tests
         public void Bid_only_quotes_not_generates_mid_quote()
         {
             // Act
-            var mid1 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid2 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid3 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = true, Price = 1, Timestamp = DateTime.UtcNow }, 3);
+            var mid1 = _generator.TryGenerate("EURUSD", true, 1, DateTime.UtcNow, 3);
+            var mid2 = _generator.TryGenerate("EURUSD", true, 1, DateTime.UtcNow, 3);
+            var mid3 = _generator.TryGenerate("EURUSD", true, 1, DateTime.UtcNow, 3);
 
             // Assert
             Assert.Null(mid1);
@@ -93,9 +92,9 @@ namespace Lykke.Job.CandlesProducer.Tests
         public void Ask_only_quotes_not_generates_mid_quote()
         {
             // Act
-            var mid1 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid2 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid3 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = DateTime.UtcNow }, 3);
+            var mid1 = _generator.TryGenerate("EURUSD", false, 1, DateTime.UtcNow, 3);
+            var mid2 = _generator.TryGenerate("EURUSD", false, 1, DateTime.UtcNow, 3);
+            var mid3 = _generator.TryGenerate("EURUSD", false, 1, DateTime.UtcNow, 3);
 
             // Assert
             Assert.Null(mid1);
@@ -107,9 +106,9 @@ namespace Lykke.Job.CandlesProducer.Tests
         public void Different_asset_pair_quotes_not_generates_mid_quote()
         {
             // Act
-            var mid1 = _generator.TryGenerate(new Quote { AssetPair = "EURUSD", IsBuy = false, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid2 = _generator.TryGenerate(new Quote { AssetPair = "USDCHF", IsBuy = true, Price = 1, Timestamp = DateTime.UtcNow }, 3);
-            var mid3 = _generator.TryGenerate(new Quote { AssetPair = "USDRUB", IsBuy = false, Price = 1, Timestamp = DateTime.UtcNow }, 3);
+            var mid1 = _generator.TryGenerate("EURUSD", false, 1, DateTime.UtcNow, 3);
+            var mid2 = _generator.TryGenerate("USDCHF", true, 1, DateTime.UtcNow, 3);
+            var mid3 = _generator.TryGenerate("USDRUB", false, 1, DateTime.UtcNow, 3);
 
             // Assert
             Assert.Null(mid1);

@@ -2,64 +2,44 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AsyncFriendlyStackTrace;
 using Common;
 using Common.Log;
-using Lykke.Domain.Prices.Model;
+using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using Lykke.RabbitMqBroker;
-using Lykke.RabbitMqBroker.Subscriber;
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages;
+using Lykke.Job.QuotesProducer.Contract;
 
-namespace Lykke.Job.CandlesProducer.Services.Candles
+namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 {
     public class MtQuotesSubscriber : IQuotesSubscriber
     {
         private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
-        private readonly string _rabbitConnectionString;
+        private readonly IRabbitMqSubscribersFactory _subscribersFactory;
+        private readonly string _connectionString;
 
-        private RabbitMqSubscriber<MtQuote> _subscriber;
+        private IStopable _subscriber;
 
-        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, string rabbitConnectionString)
+        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, string connectionString)
         {
             _log = log;
             _candlesManager = candlesManager;
-            _rabbitConnectionString = rabbitConnectionString;
+            _subscribersFactory = subscribersFactory;
+            _connectionString = connectionString;
         }
 
         public void Start()
         {
-            var settings = RabbitMqSubscriptionSettings
-                .CreateForSubscriber(_rabbitConnectionString, "lykke.mt", "pricefeed", "lykke.mt", "candlesproducer")
-                .MakeDurable();
-
-            try
-            {
-                _subscriber = new RabbitMqSubscriber<MtQuote>(settings, 
-                    new ResilientErrorHandlingStrategy(_log, settings, 
-                        retryTimeout: TimeSpan.FromSeconds(10),
-                        retryNum: 10,
-                        next: new DeadQueueErrorHandlingStrategy(_log, settings)))
-                    .SetMessageDeserializer(new JsonMessageDeserializer<MtQuote>())
-                    .SetMessageReadStrategy(new MessageReadQueueStrategy())
-                    .Subscribe(ProcessQuoteAsync)
-                    .CreateDefaultBinding()
-                    .SetLogger(_log)
-                    .Start();
-            }
-            catch (Exception ex)
-            {
-                _log.WriteErrorAsync(nameof(QuotesSubscriber), nameof(Start), null, ex).Wait();
-                throw;
-            }
+            _subscriber = _subscribersFactory.Create<MtQuoteMessage>(_connectionString, "lykke.mt", "pricefeed", ProcessQuoteAsync);
         }
 
         public void Stop()
         {
-            _subscriber.Stop();
+            _subscriber?.Stop();
         }
 
-        private async Task ProcessQuoteAsync(MtQuote quote)
+        private async Task ProcessQuoteAsync(MtQuoteMessage quote)
         {
             try
             {
@@ -74,7 +54,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (quote.Bid > 0)
                 {
-                    var bidQuote = new Quote
+                    var bidQuote = new QuoteMessage
                     {
                         AssetPair = quote.Instrument,
                         IsBuy = true,
@@ -91,7 +71,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (quote.Ask > 0)
                 {
-                    var askQuote = new Quote
+                    var askQuote = new QuoteMessage
                     {
                         AssetPair = quote.Instrument,
                         IsBuy = false,
@@ -113,7 +93,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
         }
 
-        private static IReadOnlyCollection<string> ValidateQuote(MtQuote quote)
+        private static IReadOnlyCollection<string> ValidateQuote(MtQuoteMessage quote)
         {
             var errors = new List<string>();
 
@@ -138,7 +118,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
         public void Dispose()
         {
-            _subscriber.Dispose();
+            _subscriber?.Dispose();
         }
     }
 }
