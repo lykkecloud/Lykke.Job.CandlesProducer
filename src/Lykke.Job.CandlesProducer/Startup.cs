@@ -66,7 +66,11 @@ namespace Lykke.Job.CandlesProducer
                 appSettings.CurrentValue.SlackNotifications,
                 jobSettings.ConnectionString(x => x.Db.LogsConnString));
             
-            builder.RegisterModule(new JobModule(jobSettings, appSettings.Nested(x => x.Assets), quotesSourceType, Log));
+            builder.RegisterModule(new JobModule(
+                jobSettings.CurrentValue, 
+                jobSettings.Nested(x => x.Db), 
+                appSettings.CurrentValue.Assets,
+                quotesSourceType, Log));
 
             builder.Populate(services);
 

@@ -16,11 +16,13 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     public class CandlesGenerator : ICandlesGenerator
     {
         private readonly ILog _log;
+        private readonly TimeSpan _minCacheAge;
         private ConcurrentDictionary<string, LinkedList<Candle>> _candles;
         
-        public CandlesGenerator(ILog log)
+        public CandlesGenerator(ILog log, TimeSpan minCacheAge)
         {
             _log = log;
+            _minCacheAge = minCacheAge;
             _candles = new ConcurrentDictionary<string, LinkedList<Candle>>();
         }
 
@@ -246,7 +248,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"{assetPairId.Trim().ToUpper()}-{priceType}-{timeInterval}";
         }
 
-        private static void PruneCache(LinkedList<Candle> candles)
+        private void PruneCache(LinkedList<Candle> candles)
         {
             if (!ShouldBeCached(candles, candles.First.Value.Timestamp))
             {
@@ -254,7 +256,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
         }
 
-        private static bool ShouldBeCached(LinkedList<Candle> candles, DateTime timestampToCheck)
+        private bool ShouldBeCached(LinkedList<Candle> candles, DateTime timestampToCheck)
         {
             // Stores at least half a day and not less than 2 candles for bigger intervals, 
             // to let quotes and trades meet each other in the candles cache
@@ -263,7 +265,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             {
                 var depth = candles.Last.Value.Timestamp - timestampToCheck;
 
-                if (depth > TimeSpan.FromHours(12))
+                if (depth > _minCacheAge)
                 {
                     return false;
                 }
