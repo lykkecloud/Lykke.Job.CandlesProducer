@@ -43,7 +43,6 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                     message.Order.AssetPairId,
                     message.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                     t.Timestamp,
-                    t.Price,
                     message.Order.Volume > 0 ? t.MarketVolume : t.LimitVolume
                 ));
              
@@ -66,7 +65,6 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                         o.Order.AssetPairId,
                         o.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                         t.Timestamp,
-                        t.Price,
                         o.Order.Volume > 0 ? t.Volume : t.OppositeVolume
                     )));
 
