@@ -147,7 +147,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 assetPair,
                 timestamp,
                 price,
-                isBuy ? CandlePriceType.Ask : CandlePriceType.Bid,
+                isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
                 timeInterval);
 
             if (candleUpdateResult.WasChanged)
@@ -187,7 +187,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 assetPair,
                 timestamp,
                 volume,
-                isBuy ? CandlePriceType.Ask : CandlePriceType.Bid,
+                isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
                 timeInterval);
 
             if (candleUpdateResult.WasChanged)
