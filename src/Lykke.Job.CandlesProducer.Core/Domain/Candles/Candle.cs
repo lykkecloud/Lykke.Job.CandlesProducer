@@ -16,6 +16,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double TradingVolume { get; }
         public DateTime LatestChangeTimestamp { get; }
         public DateTime OpenTimestamp { get; }
+        public bool HasPrices { get; }
 
         private Candle(
             string assetPairId, 
@@ -28,7 +29,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             double close, 
             double low, 
             double high,
-            double tradingVolume)
+            double tradingVolume,
+            bool hasPrices)
         {
             AssetPairId = assetPairId;
             PriceType = priceType;
@@ -41,6 +43,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             Low = low;
             High = high;
             TradingVolume = tradingVolume;
+            HasPrices = hasPrices;
         }
 
         public static Candle Copy(ICandle candle)
@@ -57,15 +60,15 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.Close,
                 candle.Low,
                 candle.High,
-                candle.TradingVolume
+                candle.TradingVolume,
+                candle.HasPrices
             );
         }
 
-        public static Candle Create(
+        public static Candle CreateWithPrice(
             string assetPair,
             DateTime timestamp,
             double price, 
-            double tradingVolume, 
             CandlePriceType priceType, 
             CandleTimeInterval timeInterval)
         {
@@ -83,38 +86,61 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 price,
                 price,
                 price,
-                tradingVolume
+                0,
+                true
             );
         }
 
-        public Candle Update(DateTime timestamp, double price, double tradingVolume)
+        public static Candle CreateWithTradingVolume(
+            string assetPair,
+            DateTime timestamp,
+            double volume,
+            CandlePriceType priceType,
+            CandleTimeInterval timeInterval)
+        {
+            var intervalTimestamp = timestamp.TruncateTo(timeInterval);
+
+            return new Candle
+            (
+                assetPair,
+                priceType,
+                timeInterval,
+                intervalTimestamp,
+                timestamp,
+                timestamp,
+                0,
+                0,
+                0,
+                0,
+                volume,
+                false
+            );
+        }
+
+        public Candle UpdatePrice(DateTime timestamp, double price)
         {
             double closePrice;
             double openPrice;
-            DateTime changeTimestamp;
-            DateTime openTimestamp;
+            double lowPrice;
+            double highPrice;
 
-            if (LatestChangeTimestamp < timestamp)
+            if (HasPrices)
             {
-                closePrice = price;
-                changeTimestamp = timestamp;
+                closePrice = LatestChangeTimestamp < timestamp ? price : Close;
+                openPrice = OpenTimestamp > timestamp ? price : Open;
+                lowPrice = Math.Min(Low, price);
+                highPrice = Math.Max(High, price);
             }
             else
-            {
-                closePrice = Close;
-                changeTimestamp = LatestChangeTimestamp;
-            }
-
-            if (OpenTimestamp > timestamp)
             {
                 openPrice = price;
-                openTimestamp = timestamp;
+                closePrice = price;
+                lowPrice = price;
+                highPrice = price;
             }
-            else
-            {
-                openPrice = Open;
-                openTimestamp = OpenTimestamp;
-            }
+
+            var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
+            var openTimestamp = OpenTimestamp > timestamp ? timestamp : OpenTimestamp;
 
             return new Candle(
                 AssetPairId,
@@ -125,9 +151,29 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 openTimestamp,
                 openPrice,
                 closePrice,
-                Math.Min(Low, price),
-                Math.Max(High, price),
-                TradingVolume + tradingVolume);
+                lowPrice,
+                highPrice,
+                TradingVolume,
+                true);
+        }
+
+        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume)
+        {
+            var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
+
+            return new Candle(
+                AssetPairId,
+                PriceType,
+                TimeInterval,
+                Timestamp,
+                changeTimestamp,
+                OpenTimestamp,
+                Open,
+                Close,
+                Low,
+                High,
+                TradingVolume + tradingVolume,
+                HasPrices);
         }
 
         public Candle SubstractVolume(double volume)
@@ -143,7 +189,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 Close,
                 Low,
                 High,
-                TradingVolume - volume);
+                TradingVolume - volume,
+                HasPrices);
         }
 
         public bool Equals(Candle other)
@@ -166,7 +213,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                    Close.Equals(other.Close) &&
                    High.Equals(other.High) &&
                    Low.Equals(other.Low) &&
-                   TradingVolume.Equals(other.TradingVolume);
+                   TradingVolume.Equals(other.TradingVolume) &&
+                   HasPrices.Equals(other.HasPrices);
         }
 
         public override bool Equals(object obj)
@@ -200,6 +248,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 hashCode = (hashCode * 397) ^ High.GetHashCode();
                 hashCode = (hashCode * 397) ^ Low.GetHashCode();
                 hashCode = (hashCode * 397) ^ TradingVolume.GetHashCode();
+                hashCode = (hashCode * 397) ^ HasPrices.GetHashCode();
 
                 return hashCode;
             }

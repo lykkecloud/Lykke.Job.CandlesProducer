@@ -53,6 +53,10 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         [Key(10)]
         public DateTime OpenTimestamp { get; set; }
 
+        [UsedImplicitly(ImplicitUseKindFlags.Assign)]
+        [Key(11)]
+        public bool HasPrices { get; set; }
+
         double ICandle.Open => (double) Open;
 
         double ICandle.Close => (double) Close;
@@ -77,7 +81,8 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 High = (decimal) candle.High,
                 TradingVolume = (decimal) candle.TradingVolume,
                 LatestChangeTimestamp = candle.LatestChangeTimestamp,
-                OpenTimestamp = candle.OpenTimestamp
+                OpenTimestamp = candle.OpenTimestamp,
+                HasPrices = candle.HasPrices
             };
         }
     }

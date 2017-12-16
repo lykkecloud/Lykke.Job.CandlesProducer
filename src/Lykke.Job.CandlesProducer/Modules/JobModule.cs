@@ -17,9 +17,9 @@ using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt;
 using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
-using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Job.CandlesProducer.Services.Trades.Mt;
 using Lykke.Job.CandlesProducer.Services.Trades.Spot;
+using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,15 +28,17 @@ namespace Lykke.Job.CandlesProducer.Modules
 {
     public class JobModule : Module
     {
-        private readonly IReloadingManager<CandlesProducerSettings> _settings;
-        private readonly IReloadingManager<AssetsSettings> _assetsSettings;
+        private readonly CandlesProducerSettings _settings;
+        private readonly IReloadingManager<DbSettings> _dbSettings;
+        private readonly AssetsSettings _assetsSettings;
         private readonly ILog _log;
         private readonly IServiceCollection _services;
         private readonly QuotesSourceType _quotesSourceType;
 
-        public JobModule(IReloadingManager<CandlesProducerSettings> settings, IReloadingManager<AssetsSettings> assetsSettings, QuotesSourceType quotesSourceType, ILog log)
+        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings, AssetsSettings assetsSettings, QuotesSourceType quotesSourceType, ILog log)
         {
             _settings = settings;
+            _dbSettings = dbSettings;
             _assetsSettings = assetsSettings;
             _quotesSourceType = quotesSourceType;
             _log = log;
@@ -63,8 +65,8 @@ namespace Lykke.Job.CandlesProducer.Modules
         private void RegisterAssetsServices(ContainerBuilder builder)
         {
             _services.UseAssetsClient(AssetServiceSettings.Create(
-                _assetsSettings.CurrentValue,
-                _settings.CurrentValue.AssetsCache.ExpirationPeriod));
+                _assetsSettings,
+                _settings.AssetsCache.ExpirationPeriod));
 
             builder.RegisterType<AssetPairsManager>()
                 .As<IAssetPairsManager>()
@@ -90,19 +92,27 @@ namespace Lykke.Job.CandlesProducer.Modules
                     : typeof(MtQuotesSubscriber))
                 .As<IQuotesSubscriber>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.QuotesSubscribtion));
+                .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion));
 
-            builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
-                    ? typeof(SpotTradesSubscriber)
-                    : typeof(MtTradesSubscriber))
-                .As<ITradesSubscriber>()
-                .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.TradesSubscription));
+            if (_quotesSourceType == QuotesSourceType.Spot)
+            {
+                builder.RegisterType<SpotTradesSubscriber>()
+                    .As<ITradesSubscriber>()
+                    .SingleInstance()
+                    .WithParameter(TypedParameter.From<IRabbitSubscriptionSettings>(_settings.Rabbit.TradesSubscription));
+            }
+            else
+            {
+                builder.RegisterType<MtTradesSubscriber>()
+                    .As<ITradesSubscriber>()
+                    .SingleInstance()
+                    .WithParameter(TypedParameter.From(_settings.Rabbit.TradesSubscription.ConnectionString));
+            }
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.Rabbit.CandlesPublication));
+                .WithParameter(TypedParameter.From<IRabbitPublicationSettings>(_settings.Rabbit.CandlesPublication));
 
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()
@@ -112,12 +122,13 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<CandlesGenerator>()
                 .As<ICandlesGenerator>()
                 .As<IHaveState<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
-                .SingleInstance();
+                .SingleInstance()
+                .WithParameter(TypedParameter.From(_settings.CandlesGenerator.MinCacheAge));
 
             builder.RegisterType<CandlesManager>()
                 .As<ICandlesManager>();
 
-            var snapshotsConnStringManager = _settings.Nested(x => x.Db.SnapshotsConnectionString);
+            var snapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SnapshotsConnectionString);
 
             builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
                 .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()

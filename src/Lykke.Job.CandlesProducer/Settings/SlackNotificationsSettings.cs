@@ -1,4 +1,4 @@
-﻿namespace Lykke.Job.CandlesProducer.Services.Settings
+﻿namespace Lykke.Job.CandlesProducer.Settings
 {
     public class SlackNotificationsSettings
     {

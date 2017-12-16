@@ -11,7 +11,7 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
-using Lykke.Job.CandlesProducer.Services.Settings;
+using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Logs;
 using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
@@ -66,7 +66,11 @@ namespace Lykke.Job.CandlesProducer
                 appSettings.CurrentValue.SlackNotifications,
                 jobSettings.ConnectionString(x => x.Db.LogsConnString));
             
-            builder.RegisterModule(new JobModule(jobSettings, appSettings.Nested(x => x.Assets), quotesSourceType, Log));
+            builder.RegisterModule(new JobModule(
+                jobSettings.CurrentValue, 
+                jobSettings.Nested(x => x.Db), 
+                appSettings.CurrentValue.Assets,
+                quotesSourceType, Log));
 
             builder.Populate(services);
 
