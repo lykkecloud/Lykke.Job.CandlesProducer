@@ -13,21 +13,21 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
     {
         private readonly ICandlesManager _candlesManager;
         private readonly IRabbitMqSubscribersFactory _subscribersFactory;
-        private readonly string _connectionString;
+        private readonly IRabbitSubscriptionSettings _tradesSubscriptionSettings;
         private IStopable _marketTradesSubscriber;
         private IStopable _limitTradesSubscriber;
 
-        public SpotTradesSubscriber(ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, string connectionString)
+        public SpotTradesSubscriber(ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, IRabbitSubscriptionSettings tradesSubscriptionSettings)
         {
             _candlesManager = candlesManager;
             _subscribersFactory = subscribersFactory;
-            _connectionString = connectionString;
+            _tradesSubscriptionSettings = tradesSubscriptionSettings;
         }
 
         public void Start()
         {
-            _marketTradesSubscriber = _subscribersFactory.Create<MarketTradesMessage>(_connectionString, "lykke", "trades", ProcessMarketTradesAsync);
-            _limitTradesSubscriber = _subscribersFactory.Create<LimitTradesMessage>(_connectionString, "lykke", "limitorders.clients", ProcessLimitTradesAsync);
+            _marketTradesSubscriber = _subscribersFactory.Create<MarketTradesMessage>(_tradesSubscriptionSettings.ConnectionString, "lykke", _tradesSubscriptionSettings.EndpointName, ProcessMarketTradesAsync);
+            _limitTradesSubscriber = _subscribersFactory.Create<LimitTradesMessage>(_tradesSubscriptionSettings.ConnectionString, "lykke", "limitorders.clients", ProcessLimitTradesAsync);
         }
 
         private async Task ProcessMarketTradesAsync(MarketTradesMessage message)
@@ -43,9 +43,9 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                     message.Order.AssetPairId,
                     message.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                     t.Timestamp,
-                    message.Order.Volume > 0 ? t.MarketVolume : t.LimitVolume
+                    message.Order.Volume > 0 ? t.LimitVolume : t.MarketVolume
                 ));
-             
+
             foreach (var trade in trades)
             {
                 await _candlesManager.ProcessTradeAsync(trade);
@@ -65,7 +65,7 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                         o.Order.AssetPairId,
                         o.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                         t.Timestamp,
-                        o.Order.Volume > 0 ? t.Volume : t.OppositeVolume
+                        o.Order.Volume > 0 ? t.OppositeVolume : t.Volume
                     )));
 
             foreach (var trade in trades)

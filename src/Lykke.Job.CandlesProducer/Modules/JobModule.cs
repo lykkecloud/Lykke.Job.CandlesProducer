@@ -17,9 +17,9 @@ using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt;
 using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
-using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.Job.CandlesProducer.Services.Trades.Mt;
 using Lykke.Job.CandlesProducer.Services.Trades.Spot;
+using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,17 +94,25 @@ namespace Lykke.Job.CandlesProducer.Modules
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion));
 
-            builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
-                    ? typeof(SpotTradesSubscriber)
-                    : typeof(MtTradesSubscriber))
-                .As<ITradesSubscriber>()
-                .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.Rabbit.TradesSubscription));
+            if (_quotesSourceType == QuotesSourceType.Spot)
+            {
+                builder.RegisterType<SpotTradesSubscriber>()
+                    .As<ITradesSubscriber>()
+                    .SingleInstance()
+                    .WithParameter(TypedParameter.From<IRabbitSubscriptionSettings>(_settings.Rabbit.TradesSubscription));
+            }
+            else
+            {
+                builder.RegisterType<MtTradesSubscriber>()
+                    .As<ITradesSubscriber>()
+                    .SingleInstance()
+                    .WithParameter(TypedParameter.From(_settings.Rabbit.TradesSubscription.ConnectionString));
+            }
 
             builder.RegisterType<CandlesPublisher>()
                 .As<ICandlesPublisher>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.Rabbit.CandlesPublication));
+                .WithParameter(TypedParameter.From<IRabbitPublicationSettings>(_settings.Rabbit.CandlesPublication));
 
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Lykke.Job.CandlesProducer.Core.Domain.Health;
 using Lykke.Job.CandlesProducer.Core.Services;
 

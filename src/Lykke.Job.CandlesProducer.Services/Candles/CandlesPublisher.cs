@@ -8,7 +8,6 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services.Candles.LegacyContract;
-using Lykke.Job.CandlesProducer.Services.Settings;
 using Lykke.RabbitMqBroker.Publisher;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
@@ -17,12 +16,12 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     public class CandlesPublisher : ICandlesPublisher
     {
         private readonly IRabbitMqPublishersFactory _publishersFactory;
-        private readonly CandlesPublicationRabbitSettings _settings;
+        private readonly IRabbitPublicationSettings _settings;
 
         private RabbitMqPublisher<CandleMessageV1> _legacyPublisher;
         private RabbitMqPublisher<CandlesUpdatedEvent> _publisher;
 
-        public CandlesPublisher(IRabbitMqPublishersFactory publishersFactory, CandlesPublicationRabbitSettings settings)
+        public CandlesPublisher(IRabbitMqPublishersFactory publishersFactory, IRabbitPublicationSettings settings)
         {
             _publishersFactory = publishersFactory;
             _settings = settings;

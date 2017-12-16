@@ -11,7 +11,7 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
-using Lykke.Job.CandlesProducer.Services.Settings;
+using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Logs;
 using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
