@@ -195,18 +195,21 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 changedUpdateResults.Add(candleUpdateResult);
             }
 
-            // Updates mid candle
+            // Updates mid candle only while ask candle is updated, to prevent volume doubling in mid candle
 
-            var midPriceCandleUpdateResult = _candlesGenerator.UpdateTradingVolume(
-                assetPair,
-                timestamp,
-                volume,
-                CandlePriceType.Mid,
-                timeInterval);
-
-            if (midPriceCandleUpdateResult.WasChanged)
+            if (isBuy)
             {
-                changedUpdateResults.Add(midPriceCandleUpdateResult);
+                var midPriceCandleUpdateResult = _candlesGenerator.UpdateTradingVolume(
+                    assetPair,
+                    timestamp,
+                    volume,
+                    CandlePriceType.Mid,
+                    timeInterval);
+
+                if (midPriceCandleUpdateResult.WasChanged)
+                {
+                    changedUpdateResults.Add(midPriceCandleUpdateResult);
+                }
             }
         }
     }

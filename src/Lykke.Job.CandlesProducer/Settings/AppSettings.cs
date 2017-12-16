@@ -1,8 +1,7 @@
-﻿using Lykke.Job.CandlesProducer.Services.Settings;
-using Lykke.Service.Assets.Client.Custom;
+﻿using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader.Attributes;
 
-namespace Lykke.Job.CandlesProducer
+namespace Lykke.Job.CandlesProducer.Settings
 {
     public class AppSettings
     {        
