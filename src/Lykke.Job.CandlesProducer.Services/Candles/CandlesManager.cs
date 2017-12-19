@@ -105,6 +105,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                             trade.AssetPair,
                             trade.Timestamp,
                             trade.Volume,
+                            trade.Price,
                             trade.Type == TradeType.Buy,
                             timeInterval,
                             changedUpdates);
@@ -177,6 +178,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             string assetPair,
             DateTime timestamp,
             double volume,
+            double tradePrice,
             bool isBuy,
             CandleTimeInterval timeInterval,
             ConcurrentBag<CandleUpdateResult> changedUpdateResults)
@@ -186,7 +188,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             var candleUpdateResult = _candlesGenerator.UpdateTradingVolume(
                 assetPair,
                 timestamp,
-                volume,
+                volume, 
+                tradePrice,
                 isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
                 timeInterval);
 
@@ -203,6 +206,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     assetPair,
                     timestamp,
                     volume,
+                    tradePrice,
                     CandlePriceType.Mid,
                     timeInterval);
 

@@ -57,6 +57,9 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         [Key(11)]
         public bool HasPrices { get; set; }
 
+        [Key(12)]
+        public decimal LastTradePrice { get; set; }
+
         double ICandle.Open => (double) Open;
 
         double ICandle.Close => (double) Close;
@@ -66,6 +69,8 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         double ICandle.Low => (double) Low;
 
         double ICandle.TradingVolume => (double) TradingVolume;
+
+        double ICandle.LastTradePrice => (double) LastTradePrice;
 
         public static CandleEntity Copy(ICandle candle)
         {
@@ -80,6 +85,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 Low = (decimal) candle.Low,
                 High = (decimal) candle.High,
                 TradingVolume = (decimal) candle.TradingVolume,
+                LastTradePrice = (decimal) candle.LastTradePrice,
                 LatestChangeTimestamp = candle.LatestChangeTimestamp,
                 OpenTimestamp = candle.OpenTimestamp,
                 HasPrices = candle.HasPrices

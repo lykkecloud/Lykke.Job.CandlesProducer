@@ -14,6 +14,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double High { get; }
         public double Low { get; }
         public double TradingVolume { get; }
+        public double LastTradePrice { get; }
         public DateTime LatestChangeTimestamp { get; }
         public DateTime OpenTimestamp { get; }
         public bool HasPrices { get; }
@@ -30,6 +31,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             double low, 
             double high,
             double tradingVolume,
+            double lastTradePrice,
             bool hasPrices)
         {
             AssetPairId = assetPairId;
@@ -43,6 +45,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             Low = low;
             High = high;
             TradingVolume = tradingVolume;
+            LastTradePrice = lastTradePrice;
             HasPrices = hasPrices;
         }
 
@@ -61,6 +64,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.Low,
                 candle.High,
                 candle.TradingVolume,
+                candle.LastTradePrice,
                 candle.HasPrices
             );
         }
@@ -69,6 +73,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             string assetPair,
             DateTime timestamp,
             double price, 
+            double lastTradePrice,
             CandlePriceType priceType, 
             CandleTimeInterval timeInterval)
         {
@@ -87,6 +92,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 price,
                 price,
                 0,
+                lastTradePrice,
                 true
             );
         }
@@ -95,6 +101,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             string assetPair,
             DateTime timestamp,
             double volume,
+            double lastTradePrice,
             CandlePriceType priceType,
             CandleTimeInterval timeInterval)
         {
@@ -113,6 +120,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 0,
                 0,
                 volume,
+                lastTradePrice,
                 false
             );
         }
@@ -154,12 +162,14 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 lowPrice,
                 highPrice,
                 TradingVolume,
+                LastTradePrice,
                 true);
         }
 
-        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume)
+        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume, double lastTradePrice)
         {
             var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
+            var localLastTradePrice = LatestChangeTimestamp < timestamp ? lastTradePrice : LastTradePrice;
 
             return new Candle(
                 AssetPairId,
@@ -173,6 +183,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 Low,
                 High,
                 TradingVolume + tradingVolume,
+                localLastTradePrice,
                 HasPrices);
         }
 
@@ -190,6 +201,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 Low,
                 High,
                 TradingVolume - volume,
+                LastTradePrice,
                 HasPrices);
         }
 
@@ -214,6 +226,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                    High.Equals(other.High) &&
                    Low.Equals(other.Low) &&
                    TradingVolume.Equals(other.TradingVolume) &&
+                   LastTradePrice.Equals(other.LastTradePrice) &&
                    HasPrices.Equals(other.HasPrices);
         }
 
@@ -248,6 +261,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 hashCode = (hashCode * 397) ^ High.GetHashCode();
                 hashCode = (hashCode * 397) ^ Low.GetHashCode();
                 hashCode = (hashCode * 397) ^ TradingVolume.GetHashCode();
+                hashCode = (hashCode * 397) ^ LastTradePrice.GetHashCode();
                 hashCode = (hashCode * 397) ^ HasPrices.GetHashCode();
 
                 return hashCode;

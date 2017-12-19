@@ -96,5 +96,11 @@ namespace Lykke.Job.CandlesProducer.Contract
         /// </summary>
         [Key(11)]
         public double TradingVolume { get; set; }
+
+        /// <summary>
+        /// Last price of the asset pair trade
+        /// </summary>
+        [Key(12)]
+        public double LastTradePrice { get; set; }
     }
 }
