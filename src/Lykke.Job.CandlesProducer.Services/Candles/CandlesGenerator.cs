@@ -199,7 +199,26 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                             candles.AddAfter(item, newCandle);
 
-                            PruneCache(candles);
+                            try
+                            {
+                                PruneCache(candles);
+                            }
+                            catch (Exception)
+                            {
+                                _log.WriteWarningAsync("Update candle", new
+                                {
+                                    assetPair,
+                                    timestamp,
+                                    priceType,
+                                    timeInterval,
+                                    candlesCount = candles.Count,
+                                    currentCandle,
+                                    newCandle
+                                }.ToJson(),
+                                "Failed to prune cache").GetAwaiter().GetResult();
+
+                                throw;
+                            }
 
                             return candles;
                         }
