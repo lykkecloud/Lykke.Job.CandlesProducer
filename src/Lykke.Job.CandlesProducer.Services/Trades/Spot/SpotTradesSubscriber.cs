@@ -43,7 +43,8 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                     message.Order.AssetPairId,
                     message.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                     t.Timestamp,
-                    message.Order.Volume > 0 ? t.LimitVolume : t.MarketVolume
+                    message.Order.Volume > 0 ? t.LimitVolume : t.MarketVolume,
+                    message.Order.Price ?? 0
                 ));
 
             foreach (var trade in trades)
@@ -65,7 +66,8 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                         o.Order.AssetPairId,
                         o.Order.Volume > 0 ? TradeType.Buy : TradeType.Sell,
                         t.Timestamp,
-                        o.Order.Volume > 0 ? t.OppositeVolume : t.Volume
+                        o.Order.Volume > 0 ? t.OppositeVolume : t.Volume,
+                        o.Order.Price ?? 0
                     )));
 
             foreach (var trade in trades)

@@ -33,13 +33,15 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
                 message.AssetPairId,
                 message.Type == MtTradeMessage.TradeType.Buy ? TradeType.Buy : TradeType.Sell,
                 message.Date,
-                (double) message.Volume);
+                (double) message.Volume,
+                (double) message.Price);
 
             var oppositeTrade = new Trade(
                 message.AssetPairId,
                 message.Type == MtTradeMessage.TradeType.Buy ? TradeType.Sell : TradeType.Buy,
                 message.Date,
-                (double)message.Volume);
+                (double) message.Volume,
+                (double) message.Price);
 
             await Task.WhenAll(
                 _candlesManager.ProcessTradeAsync(trade),

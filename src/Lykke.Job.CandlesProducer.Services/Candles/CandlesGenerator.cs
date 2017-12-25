@@ -29,7 +29,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         public CandleUpdateResult UpdatePrice(string assetPair, DateTime timestamp, double price, CandlePriceType priceType, CandleTimeInterval timeInterval)
         {
             return Update(assetPair, timestamp, priceType, timeInterval,
-                createNewCandle: () => Candle.CreateWithPrice(assetPair, timestamp, price, priceType, timeInterval),
+                createNewCandle: oldCandle => Candle.CreateWithPrice(assetPair, timestamp, price, oldCandle?.LastTradePrice ?? 0, priceType, timeInterval),
                 updateCandle: oldCandle => oldCandle.UpdatePrice(timestamp, price),
                 getLoggingContext: candles => new
                 {
@@ -39,17 +39,18 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 });
         }
 
-        public CandleUpdateResult UpdateTradingVolume(string assetPair, DateTime timestamp, double volume, CandlePriceType priceType,
+        public CandleUpdateResult UpdateTradingVolume(string assetPair, DateTime timestamp, double volume, double tradePrice, CandlePriceType priceType,
             CandleTimeInterval timeInterval)
         {
             return Update(assetPair, timestamp, priceType, timeInterval,
-                createNewCandle: () => Candle.CreateWithTradingVolume(assetPair, timestamp, volume, priceType, timeInterval), 
-                updateCandle: oldCandle => oldCandle.UpdateTradingVolume(timestamp, volume),
+                createNewCandle: oldCandle => Candle.CreateWithTradingVolume(assetPair, timestamp, volume, oldCandle?.LastTradePrice ?? 0, priceType, timeInterval), 
+                updateCandle: oldCandle => oldCandle.UpdateTradingVolume(timestamp, volume, tradePrice),
                 getLoggingContext: candles => new
                 {
                     assetPair = assetPair,
                     timestamp = timestamp,
                     volume = volume,
+                    tradePrice = tradePrice,
                     oldestCachedCandle = candles.First.Value
                 });
         }
@@ -138,7 +139,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             DateTime timestamp,
             CandlePriceType priceType,
             CandleTimeInterval timeInterval,
-            Func<Candle> createNewCandle,
+            Func<Candle, Candle> createNewCandle,
             Func<Candle, Candle> updateCandle,
             Func<LinkedList<Candle>, object> getLoggingContext)
         {
@@ -152,7 +153,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 {
                     var candles = new LinkedList<Candle>();
 
-                    newCandle = createNewCandle();
+                    newCandle = createNewCandle(null);
                     isLatestCandle = true;
 
                     candles.AddFirst(newCandle);
@@ -172,9 +173,9 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                     for (var item = candles.Last; item != null; item = item.Previous)
                     {
-                        var candle = item.Value;
+                        var currentCandle = item.Value;
 
-                        if (candleTimestamp == candle.Timestamp)
+                        if (candleTimestamp == currentCandle.Timestamp)
                         {
                             // Candle matches exactly - updating it
 
@@ -187,18 +188,37 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                             return candles;
                         }
 
-                        if (candleTimestamp > candle.Timestamp)
+                        if (candleTimestamp > currentCandle.Timestamp)
                         {
                             // We don't find the candle that matches exactly yet,
                             // but curent given data is newer than the current candle,
                             // so insert new candle just after the current candle
 
-                            newCandle = createNewCandle();
+                            newCandle = createNewCandle(currentCandle);
                             isLatestCandle = item == candles.Last;
 
                             candles.AddAfter(item, newCandle);
 
-                            PruneCache(candles);
+                            try
+                            {
+                                PruneCache(candles);
+                            }
+                            catch (Exception)
+                            {
+                                _log.WriteWarningAsync("Update candle", new
+                                {
+                                    assetPair,
+                                    timestamp,
+                                    priceType,
+                                    timeInterval,
+                                    candlesCount = candles.Count,
+                                    currentCandle,
+                                    newCandle
+                                }.ToJson(),
+                                "Failed to prune cache").GetAwaiter().GetResult();
+
+                                throw;
+                            }
 
                             return candles;
                         }
@@ -213,7 +233,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                     {
                         // Cache not filled yet, so saves the candle
 
-                        newCandle = createNewCandle();
+                        newCandle = createNewCandle(null);
 
                         candles.AddFirst(newCandle);
                     }
