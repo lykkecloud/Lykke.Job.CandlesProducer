@@ -73,42 +73,45 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 addValueFactory: k => throw new InvalidOperationException("Key should be already presented in the dictionary"),
                 updateValueFactory: (k, candles) =>
                 {
-                    for (var item = candles.First; item.Next != null; item = item.Next)
+                    lock (candles)
                     {
-                        var cachedCandle = item.Value;
-
-                        if (cachedCandle.Timestamp == candle.Timestamp)
+                        for (var item = candles.First; item.Next != null; item = item.Next)
                         {
-                            if (cachedCandle.LatestChangeTimestamp == candle.LatestChangeTimestamp)
-                            {
-                                // Candle wasn't changed between Update and Undo call, so we can just revert to the old candle
+                            var cachedCandle = item.Value;
 
-                                if (oldCandle == null)
+                            if (cachedCandle.Timestamp == candle.Timestamp)
+                            {
+                                if (cachedCandle.LatestChangeTimestamp == candle.LatestChangeTimestamp)
                                 {
-                                    candles.Remove(item);
+                                    // Candle wasn't changed between Update and Undo call, so we can just revert to the old candle
+
+                                    if (oldCandle == null)
+                                    {
+                                        candles.Remove(item);
+                                    }
+                                    else
+                                    {
+                                        item.Value = oldCandle;
+                                    }
+
+                                    return candles;
                                 }
-                                else
-                                {
-                                    item.Value = oldCandle;
-                                }
+
+                                // Candle was changed between Update and Undo call, so we should revert only addition operations
+
+                                var oldVolume = oldCandle?.TradingVolume ?? 0;
+                                var volumeToUndo = candle.TradingVolume - oldVolume;
+
+                                item.Value = cachedCandle.SubstractVolume(volumeToUndo);
 
                                 return candles;
                             }
+                        }
 
-                            // Candle was changed between Update and Undo call, so we should revert only addition operations
+                        // Candle was already evicted from the cache, so nothing to undo at all
 
-                            var oldVolume = oldCandle?.TradingVolume ?? 0;
-                            var volumeToUndo = candle.TradingVolume - oldVolume;
-
-                            item.Value = cachedCandle.SubstractVolume(volumeToUndo);
-
-                            return candles;
-                        }    
+                        return candles;
                     }
-
-                    // Candle was already evicted from the cache, so nothing to undo at all
-
-                    return candles;
                 });
         }
 
@@ -162,94 +165,97 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 },
                 updateValueFactory: (k, candles) =>
                 {
-                    // Candles is ordered by the Timestamp
-
-                    var candleTimestamp = timestamp.TruncateTo(timeInterval);
-
-                    // Common cases:
-                    // 1. lastCandle should be update
-                    // 2. new candle should be added to the tail
-                    // so start search from the end
-
-                    for (var item = candles.Last; item != null; item = item.Previous)
+                    lock (candles)
                     {
-                        var currentCandle = item.Value;
+                        // Candles is ordered by the Timestamp
 
-                        if (candleTimestamp == currentCandle.Timestamp)
+                        var candleTimestamp = timestamp.TruncateTo(timeInterval);
+
+                        // Common cases:
+                        // 1. lastCandle should be update
+                        // 2. new candle should be added to the tail
+                        // so start search from the end
+
+                        for (var item = candles.Last; item != null; item = item.Previous)
                         {
-                            // Candle matches exactly - updating it
+                            var currentCandle = item.Value;
 
-                            oldCandle = item.Value;
-                            newCandle = updateCandle(oldCandle);
-                            isLatestCandle = item == candles.Last;
-
-                            item.Value = newCandle;
-
-                            return candles;
-                        }
-
-                        if (candleTimestamp > currentCandle.Timestamp)
-                        {
-                            // We don't find the candle that matches exactly yet,
-                            // but curent given data is newer than the current candle,
-                            // so insert new candle just after the current candle
-
-                            newCandle = createNewCandle(currentCandle);
-                            isLatestCandle = item == candles.Last;
-
-                            candles.AddAfter(item, newCandle);
-
-                            try
+                            if (candleTimestamp == currentCandle.Timestamp)
                             {
-                                PruneCache(candles);
+                                // Candle matches exactly - updating it
+
+                                oldCandle = item.Value;
+                                newCandle = updateCandle(oldCandle);
+                                isLatestCandle = item == candles.Last;
+
+                                item.Value = newCandle;
+
+                                return candles;
                             }
-                            catch (Exception)
+
+                            if (candleTimestamp > currentCandle.Timestamp)
                             {
-                                _log.WriteWarningAsync("Update candle", new
+                                // We don't find the candle that matches exactly yet,
+                                // but curent given data is newer than the current candle,
+                                // so insert new candle just after the current candle
+
+                                newCandle = createNewCandle(currentCandle);
+                                isLatestCandle = item == candles.Last;
+
+                                candles.AddAfter(item, newCandle);
+
+                                try
                                 {
-                                    assetPair,
-                                    timestamp,
-                                    priceType,
-                                    timeInterval,
-                                    candlesCount = candles.Count,
-                                    currentCandle,
-                                    newCandle
-                                }.ToJson(),
-                                "Failed to prune cache").GetAwaiter().GetResult();
+                                    PruneCache(candles);
+                                }
+                                catch (Exception)
+                                {
+                                    _log.WriteWarningAsync("Update candle", new
+                                        {
+                                            assetPair,
+                                            timestamp,
+                                            priceType,
+                                            timeInterval,
+                                            candlesCount = candles.Count,
+                                            currentCandle,
+                                            newCandle
+                                        }.ToJson(),
+                                        "Failed to prune cache").GetAwaiter().GetResult();
 
-                                throw;
+                                    throw;
+                                }
+
+                                return candles;
                             }
 
-                            return candles;
+                            // Given data is older then the current candle, so
+                            // continue searching of the exactly matched or older candler
                         }
 
-                        // Given data is older then the current candle, so
-                        // continue searching of the exactly matched or older candler
+                        // Given data is older then the oldest of the cached candles.
+
+                        if (ShouldBeCached(candles, timestamp))
+                        {
+                            // Cache not filled yet, so saves the candle
+
+                            newCandle = createNewCandle(null);
+
+                            candles.AddFirst(newCandle);
+                        }
+                        else
+                        {
+                            // Nothing to update here and no candle can be returned
+                            // since we can't obtain full candle state
+
+                            _log.WriteWarningAsync(
+                                nameof(CandlesGenerator),
+                                nameof(UpdatePrice),
+                                getLoggingContext(candles).ToJson(),
+                                "Incoming data is to old to update the candle. No candle will be generated").Wait();
+                        }
+
+                        return candles;
                     }
-
-                    // Given data is older then the oldest of the cached candles.
-
-                    if (ShouldBeCached(candles, timestamp))
-                    {
-                        // Cache not filled yet, so saves the candle
-
-                        newCandle = createNewCandle(null);
-
-                        candles.AddFirst(newCandle);
-                    }
-                    else
-                    {
-                        // Nothing to update here and no candle can be returned
-                        // since we can't obtain full candle state
-
-                        _log.WriteWarningAsync(
-                            nameof(CandlesGenerator),
-                            nameof(UpdatePrice),
-                            getLoggingContext(candles).ToJson(),
-                            "Incoming data is to old to update the candle. No candle will be generated").Wait();
-                    }
-
-                    return candles;
                 });
 
             // Candles without prices shouldn't be produced
