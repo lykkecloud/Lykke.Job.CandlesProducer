@@ -57,8 +57,13 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         [Key(11)]
         public bool HasPrices { get; set; }
 
+        [UsedImplicitly]
         [Key(12)]
         public decimal LastTradePrice { get; set; }
+
+        [UsedImplicitly]
+        [Key(13)]
+        public decimal TradingOppositeVolume { get; set; }
 
         double ICandle.Open => (double) Open;
 
@@ -69,6 +74,8 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
         double ICandle.Low => (double) Low;
 
         double ICandle.TradingVolume => (double) TradingVolume;
+
+        double ICandle.TradingOppositeVolume => (double) TradingOppositeVolume;
 
         double ICandle.LastTradePrice => (double) LastTradePrice;
 
@@ -85,6 +92,7 @@ namespace Lykke.Job.CandlesProducer.AzureRepositories
                 Low = (decimal) candle.Low,
                 High = (decimal) candle.High,
                 TradingVolume = (decimal) candle.TradingVolume,
+                TradingOppositeVolume = (decimal) candle.TradingOppositeVolume,
                 LastTradePrice = (decimal) candle.LastTradePrice,
                 LatestChangeTimestamp = candle.LatestChangeTimestamp,
                 OpenTimestamp = candle.OpenTimestamp,

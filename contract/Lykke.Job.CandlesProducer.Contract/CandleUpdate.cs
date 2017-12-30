@@ -92,7 +92,7 @@ namespace Lykke.Job.CandlesProducer.Contract
         public double Low { get; set; }
 
         /// <summary>
-        /// Trading volume of the candle
+        /// Trading volume of the candle in the base asset of the asset pair
         /// </summary>
         [Key(11)]
         public double TradingVolume { get; set; }
@@ -102,5 +102,11 @@ namespace Lykke.Job.CandlesProducer.Contract
         /// </summary>
         [Key(12)]
         public double LastTradePrice { get; set; }
+
+        /// <summary>
+        /// Trading volume of the candle in the quoting asset of the asset pair
+        /// </summary>
+        [Key(13)]
+        public double TradingOppositeVolume { get; set; }
     }
 }

@@ -29,11 +29,14 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
 
         private async Task ProcessTradeAsync(MtTradeMessage message)
         {
+            var quotingVolume = (double) (message.Volume * message.Price);
+
             var trade = new Trade(
                 message.AssetPairId,
                 message.Type == MtTradeMessage.TradeType.Buy ? TradeType.Buy : TradeType.Sell,
                 message.Date,
                 (double) message.Volume,
+                quotingVolume,
                 (double) message.Price);
 
             var oppositeTrade = new Trade(
@@ -41,6 +44,7 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
                 message.Type == MtTradeMessage.TradeType.Buy ? TradeType.Sell : TradeType.Buy,
                 message.Date,
                 (double) message.Volume,
+                quotingVolume,
                 (double) message.Price);
 
             await Task.WhenAll(
