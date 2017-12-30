@@ -14,6 +14,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double High { get; }
         public double Low { get; }
         public double TradingVolume { get; }
+        public double TradingOppositeVolume { get; }
         public double LastTradePrice { get; }
         public DateTime LatestChangeTimestamp { get; }
         public DateTime OpenTimestamp { get; }
@@ -31,6 +32,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             double low, 
             double high,
             double tradingVolume,
+            double tradingOppositeVolume,
             double lastTradePrice,
             bool hasPrices)
         {
@@ -45,6 +47,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             Low = low;
             High = high;
             TradingVolume = tradingVolume;
+            TradingOppositeVolume = tradingOppositeVolume;
             LastTradePrice = lastTradePrice;
             HasPrices = hasPrices;
         }
@@ -64,6 +67,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.Low,
                 candle.High,
                 candle.TradingVolume,
+                candle.TradingOppositeVolume, 
                 candle.LastTradePrice,
                 candle.HasPrices
             );
@@ -92,6 +96,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 price,
                 price,
                 0,
+                0,
                 lastTradePrice,
                 true
             );
@@ -99,9 +104,10 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
 
         public static Candle CreateWithTradingVolume(
             string assetPair,
-            DateTime timestamp,
-            double volume,
-            double lastTradePrice,
+            DateTime timestamp, 
+            double tradingVolume, 
+            double tradingOppositeVolume, 
+            double lastTradePrice, 
             CandlePriceType priceType,
             CandleTimeInterval timeInterval)
         {
@@ -119,7 +125,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 0,
                 0,
                 0,
-                volume,
+                tradingVolume,
+                tradingOppositeVolume,
                 lastTradePrice,
                 false
             );
@@ -162,11 +169,12 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 lowPrice,
                 highPrice,
                 TradingVolume,
+                TradingOppositeVolume,
                 LastTradePrice,
                 true);
         }
 
-        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume, double lastTradePrice)
+        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume, double tradingOppositeVolume, double lastTradePrice)
         {
             var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
             var localLastTradePrice = LatestChangeTimestamp < timestamp ? lastTradePrice : LastTradePrice;
@@ -183,11 +191,12 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 Low,
                 High,
                 TradingVolume + tradingVolume,
+                TradingOppositeVolume + tradingOppositeVolume,
                 localLastTradePrice,
                 HasPrices);
         }
 
-        public Candle SubstractVolume(double volume)
+        public Candle SubstractVolume(double tradingVolume, double tradingOppositeVolume)
         {
             return new Candle(
                 AssetPairId,
@@ -200,7 +209,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 Close,
                 Low,
                 High,
-                TradingVolume - volume,
+                TradingVolume - tradingVolume,
+                TradingOppositeVolume - tradingOppositeVolume,
                 LastTradePrice,
                 HasPrices);
         }
@@ -226,6 +236,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                    High.Equals(other.High) &&
                    Low.Equals(other.Low) &&
                    TradingVolume.Equals(other.TradingVolume) &&
+                   TradingOppositeVolume.Equals(other.TradingOppositeVolume) &&
                    LastTradePrice.Equals(other.LastTradePrice) &&
                    HasPrices.Equals(other.HasPrices);
         }
@@ -261,6 +272,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 hashCode = (hashCode * 397) ^ High.GetHashCode();
                 hashCode = (hashCode * 397) ^ Low.GetHashCode();
                 hashCode = (hashCode * 397) ^ TradingVolume.GetHashCode();
+                hashCode = (hashCode * 397) ^ TradingOppositeVolume.GetHashCode();
                 hashCode = (hashCode * 397) ^ LastTradePrice.GetHashCode();
                 hashCode = (hashCode * 397) ^ HasPrices.GetHashCode();
 

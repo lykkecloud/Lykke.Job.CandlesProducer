@@ -39,17 +39,17 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 });
         }
 
-        public CandleUpdateResult UpdateTradingVolume(string assetPair, DateTime timestamp, double volume, double tradePrice, CandlePriceType priceType,
-            CandleTimeInterval timeInterval)
+        public CandleUpdateResult UpdateTradingVolume(string assetPair, DateTime timestamp, double tradingVolume, double tradingOppositeVolume, double tradePrice, CandlePriceType priceType, CandleTimeInterval timeInterval)
         {
             return Update(assetPair, timestamp, priceType, timeInterval,
-                createNewCandle: oldCandle => Candle.CreateWithTradingVolume(assetPair, timestamp, volume, oldCandle?.LastTradePrice ?? 0, priceType, timeInterval), 
-                updateCandle: oldCandle => oldCandle.UpdateTradingVolume(timestamp, volume, tradePrice),
+                createNewCandle: oldCandle => Candle.CreateWithTradingVolume(assetPair, timestamp, tradingVolume, tradingOppositeVolume, oldCandle?.LastTradePrice ?? 0, priceType, timeInterval), 
+                updateCandle: oldCandle => oldCandle.UpdateTradingVolume(timestamp, tradingVolume, tradingOppositeVolume, tradePrice),
                 getLoggingContext: candles => new
                 {
                     assetPair = assetPair,
                     timestamp = timestamp,
-                    volume = volume,
+                    baseVolume = tradingVolume,
+                    quotingVolume = tradingOppositeVolume,
                     tradePrice = tradePrice,
                     oldestCachedCandle = candles.First.Value
                 });
@@ -99,10 +99,13 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                                 // Candle was changed between Update and Undo call, so we should revert only addition operations
 
-                                var oldVolume = oldCandle?.TradingVolume ?? 0;
-                                var volumeToUndo = candle.TradingVolume - oldVolume;
+                                var oldTradingVolume = oldCandle?.TradingVolume ?? 0;
+                                var tradingVolumeToUndo = candle.TradingVolume - oldTradingVolume;
 
-                                item.Value = cachedCandle.SubstractVolume(volumeToUndo);
+                                var oldTradingOppositeVolume = oldCandle?.TradingOppositeVolume ?? 0;
+                                var tradingOppositeVolumeToUndo = candle.TradingOppositeVolume - oldTradingOppositeVolume;
+
+                                item.Value = cachedCandle.SubstractVolume(tradingVolumeToUndo, tradingOppositeVolumeToUndo);
 
                                 return candles;
                             }
