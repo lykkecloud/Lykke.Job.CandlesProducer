@@ -104,7 +104,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         ProcessTradeInterval(
                             trade.AssetPair,
                             trade.Timestamp,
-                            trade.Volume,
+                            trade.BaseVolume,
+                            trade.QuotingVolume,
                             trade.Price,
                             trade.Type == TradeType.Buy,
                             timeInterval,
@@ -174,21 +175,15 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             }
         }
 
-        private void ProcessTradeInterval(
-            string assetPair,
-            DateTime timestamp,
-            double volume,
-            double tradePrice,
-            bool isBuy,
-            CandleTimeInterval timeInterval,
-            ConcurrentBag<CandleUpdateResult> changedUpdateResults)
+        private void ProcessTradeInterval(string assetPair, DateTime timestamp, double baseVolume, double quotingVolume, double tradePrice, bool isBuy, CandleTimeInterval timeInterval, ConcurrentBag<CandleUpdateResult> changedUpdateResults)
         {
             // Updates ask/bid candle
 
             var candleUpdateResult = _candlesGenerator.UpdateTradingVolume(
                 assetPair,
                 timestamp,
-                volume, 
+                baseVolume, 
+                quotingVolume,
                 tradePrice,
                 isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
                 timeInterval);
@@ -205,7 +200,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 var midPriceCandleUpdateResult = _candlesGenerator.UpdateTradingVolume(
                     assetPair,
                     timestamp,
-                    volume,
+                    baseVolume,
+                    quotingVolume,
                     tradePrice,
                     CandlePriceType.Mid,
                     timeInterval);
