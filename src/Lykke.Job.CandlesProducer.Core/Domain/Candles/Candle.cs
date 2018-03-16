@@ -15,10 +15,8 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
         public double Low { get; }
         public double TradingVolume { get; }
         public double TradingOppositeVolume { get; }
-        public double LastTradePrice { get; }
         public DateTime LatestChangeTimestamp { get; }
         public DateTime OpenTimestamp { get; }
-        public bool HasPrices { get; }
 
         private Candle(
             string assetPairId, 
@@ -32,9 +30,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             double low, 
             double high,
             double tradingVolume,
-            double tradingOppositeVolume,
-            double lastTradePrice,
-            bool hasPrices)
+            double tradingOppositeVolume)
         {
             AssetPairId = assetPairId;
             PriceType = priceType;
@@ -48,8 +44,6 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             High = high;
             TradingVolume = tradingVolume;
             TradingOppositeVolume = tradingOppositeVolume;
-            LastTradePrice = lastTradePrice;
-            HasPrices = hasPrices;
         }
 
         public static Candle Copy(ICandle candle)
@@ -67,20 +61,24 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 candle.Low,
                 candle.High,
                 candle.TradingVolume,
-                candle.TradingOppositeVolume, 
-                candle.LastTradePrice,
-                candle.HasPrices
+                candle.TradingOppositeVolume
             );
         }
 
-        public static Candle CreateWithPrice(
+        public static Candle CreateQuotingCandle(
             string assetPair,
             DateTime timestamp,
-            double price, 
-            double lastTradePrice,
+            double price,
             CandlePriceType priceType, 
             CandleTimeInterval timeInterval)
         {
+            if (priceType != CandlePriceType.Ask &&
+                priceType != CandlePriceType.Bid &&
+                priceType != CandlePriceType.Mid)
+            {
+                throw new ArgumentOutOfRangeException(nameof(priceType), priceType, "Price type should be Ask, Bid or Mid for the quoting candle");
+            }
+
             var intervalTimestamp = timestamp.TruncateTo(timeInterval);
 
             return new Candle
@@ -96,19 +94,16 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 price,
                 price,
                 0,
-                0,
-                lastTradePrice,
-                true
+                0
             );
         }
 
-        public static Candle CreateWithTradingVolume(
+        public static Candle CreateTradingCandle(
             string assetPair,
-            DateTime timestamp, 
-            double tradingVolume, 
-            double tradingOppositeVolume, 
-            double lastTradePrice, 
-            CandlePriceType priceType,
+            DateTime timestamp,
+            double price,
+            double baseTradingVolume, 
+            double quotingTradingVolume,
             CandleTimeInterval timeInterval)
         {
             var intervalTimestamp = timestamp.TruncateTo(timeInterval);
@@ -116,43 +111,38 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
             return new Candle
             (
                 assetPair,
-                priceType,
+                CandlePriceType.Trades,
                 timeInterval,
                 intervalTimestamp,
                 timestamp,
                 timestamp,
-                0,
-                0,
-                0,
-                0,
-                tradingVolume,
-                tradingOppositeVolume,
-                lastTradePrice,
-                false
+                price,
+                price,
+                price,
+                price,
+                baseTradingVolume,
+                quotingTradingVolume
             );
         }
 
-        public Candle UpdatePrice(DateTime timestamp, double price)
+        public Candle UpdateQuotingCandle(DateTime timestamp, double price)
         {
+            if (PriceType != CandlePriceType.Ask &&
+                PriceType != CandlePriceType.Bid &&
+                PriceType != CandlePriceType.Mid)
+            {
+                throw new InvalidOperationException("Price type should be Ask, Bid or Mid for the quoting candle");
+            }
+
             double closePrice;
             double openPrice;
             double lowPrice;
             double highPrice;
 
-            if (HasPrices)
-            {
-                closePrice = LatestChangeTimestamp < timestamp ? price : Close;
-                openPrice = OpenTimestamp > timestamp ? price : Open;
-                lowPrice = Math.Min(Low, price);
-                highPrice = Math.Max(High, price);
-            }
-            else
-            {
-                openPrice = price;
-                closePrice = price;
-                lowPrice = price;
-                highPrice = price;
-            }
+            closePrice = LatestChangeTimestamp < timestamp ? price : Close;
+            openPrice = OpenTimestamp > timestamp ? price : Open;
+            lowPrice = Math.Min(Low, price);
+            highPrice = Math.Max(High, price);
 
             var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
             var openTimestamp = OpenTimestamp > timestamp ? timestamp : OpenTimestamp;
@@ -168,16 +158,29 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 closePrice,
                 lowPrice,
                 highPrice,
-                TradingVolume,
-                TradingOppositeVolume,
-                LastTradePrice,
-                true);
+                0,
+                0);
         }
 
-        public Candle UpdateTradingVolume(DateTime timestamp, double tradingVolume, double tradingOppositeVolume, double lastTradePrice)
+        public Candle UpdateTradingCandle(DateTime timestamp, double price, double tradingVolume, double tradingOppositeVolume)
         {
+            if (PriceType != CandlePriceType.Trades)
+            {
+                throw new InvalidOperationException("Price type should be Trades for the trading candle");
+            }
+
+            double closePrice;
+            double openPrice;
+            double lowPrice;
+            double highPrice;
+
+            closePrice = LatestChangeTimestamp < timestamp ? price : Close;
+            openPrice = OpenTimestamp > timestamp ? price : Open;
+            lowPrice = Math.Min(Low, price);
+            highPrice = Math.Max(High, price);
+
             var changeTimestamp = LatestChangeTimestamp < timestamp ? timestamp : LatestChangeTimestamp;
-            var localLastTradePrice = LatestChangeTimestamp < timestamp ? lastTradePrice : LastTradePrice;
+            var openTimestamp = OpenTimestamp > timestamp ? timestamp : OpenTimestamp;
 
             return new Candle(
                 AssetPairId,
@@ -185,34 +188,13 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 TimeInterval,
                 Timestamp,
                 changeTimestamp,
-                OpenTimestamp,
-                Open,
-                Close,
-                Low,
-                High,
+                openTimestamp,
+                openPrice,
+                closePrice,
+                lowPrice,
+                highPrice,
                 TradingVolume + tradingVolume,
-                TradingOppositeVolume + tradingOppositeVolume,
-                localLastTradePrice,
-                HasPrices);
-        }
-
-        public Candle SubstractVolume(double tradingVolume, double tradingOppositeVolume)
-        {
-            return new Candle(
-                AssetPairId,
-                PriceType,
-                TimeInterval,
-                Timestamp,
-                LatestChangeTimestamp,
-                OpenTimestamp,
-                Open,
-                Close,
-                Low,
-                High,
-                TradingVolume - tradingVolume,
-                TradingOppositeVolume - tradingOppositeVolume,
-                LastTradePrice,
-                HasPrices);
+                TradingOppositeVolume + tradingOppositeVolume);
         }
 
         public bool Equals(Candle other)
@@ -236,9 +218,7 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                    High.Equals(other.High) &&
                    Low.Equals(other.Low) &&
                    TradingVolume.Equals(other.TradingVolume) &&
-                   TradingOppositeVolume.Equals(other.TradingOppositeVolume) &&
-                   LastTradePrice.Equals(other.LastTradePrice) &&
-                   HasPrices.Equals(other.HasPrices);
+                   TradingOppositeVolume.Equals(other.TradingOppositeVolume);
         }
 
         public override bool Equals(object obj)
@@ -273,8 +253,6 @@ namespace Lykke.Job.CandlesProducer.Core.Domain.Candles
                 hashCode = (hashCode * 397) ^ Low.GetHashCode();
                 hashCode = (hashCode * 397) ^ TradingVolume.GetHashCode();
                 hashCode = (hashCode * 397) ^ TradingOppositeVolume.GetHashCode();
-                hashCode = (hashCode * 397) ^ LastTradePrice.GetHashCode();
-                hashCode = (hashCode * 397) ^ HasPrices.GetHashCode();
 
                 return hashCode;
             }

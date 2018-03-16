@@ -48,7 +48,6 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                 Candles = updates
                     .Select(c => new CandleUpdate
                     {
-                        IsLatestCandle = c.IsLatestCandle,
                         IsLatestChange = c.IsLatestChange,
                         ChangeTimestamp = c.Candle.LatestChangeTimestamp,
                         AssetPairId = c.Candle.AssetPairId,
@@ -61,7 +60,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         High = c.Candle.High,
                         TradingVolume = c.Candle.TradingVolume,
                         TradingOppositeVolume = c.Candle.TradingOppositeVolume,
-                        LastTradePrice = c.Candle.LastTradePrice
+                        IsLatestCandle = true,
+                        LastTradePrice = 0
                     })
                     .ToArray()
             };

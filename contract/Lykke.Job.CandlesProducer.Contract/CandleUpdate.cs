@@ -11,10 +11,11 @@ namespace Lykke.Job.CandlesProducer.Contract
     [MessagePackObject]
     public class CandleUpdate
     {
-        /// <summary>
-        /// Is the latest (active) candle at the moment of the update?
-        /// </summary>
+        /// <summary>	
+        /// Is the latest (active) candle at the moment of the update?	
+        /// </summary>	
         [Key(0)]
+        [Obsolete("Is always true starting from the v4, should not be used. Will be removed in the future releases")]
         public bool IsLatestCandle { get; set; }
 
         /// <summary>
@@ -92,19 +93,22 @@ namespace Lykke.Job.CandlesProducer.Contract
         public double Low { get; set; }
 
         /// <summary>
-        /// Trading volume of the candle in the base asset of the asset pair
+        /// Trading volume of the candle in the base asset of the asset pair.
+        /// Has the meaning only for the <see cref="PriceType"/> == <see cref="CandlePriceType.Trades"/>
         /// </summary>
         [Key(11)]
         public double TradingVolume { get; set; }
 
-        /// <summary>
-        /// Last price of the asset pair trade
-        /// </summary>
+        /// <summary>	
+        /// Last price of the asset pair trade	
+        /// </summary>	
         [Key(12)]
+        [Obsolete("Is always 0 starting from the v4, should not be used. Will be removed in the future releases")]
         public double LastTradePrice { get; set; }
 
         /// <summary>
         /// Trading volume of the candle in the quoting asset of the asset pair
+        /// Has the meaning only for the <see cref="PriceType"/> == <see cref="CandlePriceType.Trades"/>
         /// </summary>
         [Key(13)]
         public double TradingOppositeVolume { get; set; }

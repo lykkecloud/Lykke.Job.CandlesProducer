@@ -121,7 +121,7 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<CandlesGenerator>()
                 .As<ICandlesGenerator>()
-                .As<IHaveState<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
+                .As<IHaveState<ImmutableDictionary<string, ICandle>>>()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.CandlesGenerator.MinCacheAge));
 
@@ -138,10 +138,11 @@ namespace Lykke.Job.CandlesProducer.Modules
                 .As<ISnapshotSerializer>();
 
             builder.RegisterType<CandlesGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
+                .As<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>()
+                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))))
+                .SingleInstance();
 
-            builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ImmutableList<ICandle>>>>()
+            builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
                 .As<ISnapshotSerializer>()
                 .PreserveExistingDefaults();
         }
