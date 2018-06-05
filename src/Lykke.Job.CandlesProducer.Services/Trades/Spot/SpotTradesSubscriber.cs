@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Common;
+using Common.Log;
 using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Core.Domain.Trades;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -14,6 +16,7 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
     [UsedImplicitly]
     public class SpotTradesSubscriber : ITradesSubscriber
     {
+        private readonly ILog _log;
         private readonly ICandlesManager _candlesManager;
         private readonly IRabbitMqSubscribersFactory _subscribersFactory;
         private readonly IRabbitSubscriptionSettings _tradesSubscriptionSettings;
@@ -21,15 +24,18 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
         private IStopable _limitTradesSubscriber;
 
         public SpotTradesSubscriber(
+            ILog log,
             ICandlesManager candlesManager, 
             IRabbitMqSubscribersFactory subscribersFactory, 
             IRabbitSubscriptionSettings tradesSubscriptionSettings,
             IAssetPairsManager assetPairsManager)
         {
-            _candlesManager = candlesManager;
-            _subscribersFactory = subscribersFactory;
-            _tradesSubscriptionSettings = tradesSubscriptionSettings;
-            _assetPairsManager = assetPairsManager;
+            _log = log?.CreateComponentScope(nameof(SpotTradesSubscriber)) ??
+                   throw new ArgumentNullException(nameof(log));
+            _candlesManager = candlesManager ?? throw new ArgumentNullException(nameof(candlesManager));
+            _subscribersFactory = subscribersFactory ?? throw new ArgumentNullException(nameof(_subscribersFactory));
+            _tradesSubscriptionSettings = tradesSubscriptionSettings ?? throw new ArgumentNullException(nameof(_tradesSubscriptionSettings));
+            _assetPairsManager = assetPairsManager ?? throw new ArgumentNullException(nameof(_assetPairsManager));
         }
 
         public void Start()
@@ -94,15 +100,25 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
                         quotingVolume = tradeMessage.Volume;
                     }
 
-                    var trade = new Trade(
-                        orderMessage.Order.AssetPairId,
-                        tradeMessage.Timestamp,
-                        baseVolume,
-                        quotingVolume,
-                        tradeMessage.Price
-                    );
+                    // Just discarding trades with negative prices and\or volumes.  It's better to do it here instead of
+                    // at the first line of foreach 'case we have some additional trade selection logic in the begining.
+                    // ReSharper disable once InvertIf
+                    if (tradeMessage.Price > 0 && baseVolume > 0 && quotingVolume > 0)
+                    {
+                        var trade = new Trade(
+                            orderMessage.Order.AssetPairId,
+                            tradeMessage.Timestamp,
+                            baseVolume,
+                            quotingVolume,
+                            tradeMessage.Price
+                        );
 
-                    await _candlesManager.ProcessTradeAsync(trade);
+                        await _candlesManager.ProcessTradeAsync(trade);
+                    }
+                    else
+                    {
+                        await _log.WriteWarningAsync(nameof(ProcessLimitTradesAsync), tradeMessage.ToJson(), "Got a Spot trade with non-positive price or volume value.");
+                    }
                 }
             }
         }
