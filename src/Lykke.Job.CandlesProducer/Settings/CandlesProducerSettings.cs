@@ -7,5 +7,6 @@
         public AssetsCacheSettings AssetsCache { get; set; }
         public RabbitSettings Rabbit { get; set; }
         public CandlesGeneratorSettings CandlesGenerator { get; set; }
+        public string MtAssetServiceUrl { get; set; }
     }
 }
