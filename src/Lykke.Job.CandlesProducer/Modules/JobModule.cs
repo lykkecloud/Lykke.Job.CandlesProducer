@@ -93,10 +93,6 @@ namespace Lykke.Job.CandlesProducer.Modules
 
         private void RegisterAssetsServices(ContainerBuilder builder)
         {
-            
-            builder.RegisterType<AssetPairsManager>()
-                .As<IAssetPairsManager>()
-                .SingleInstance();
 
             if (_quotesSourceType == QuotesSourceType.Spot)
             {
@@ -106,7 +102,7 @@ namespace Lykke.Job.CandlesProducer.Modules
             }
             else
             {
-                builder.RegisterClient<IAssetPairsApi>(_settings.MtAssetServiceUrl);
+                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl);
             }
 
             builder.RegisterType<AssetPairsManager>()
