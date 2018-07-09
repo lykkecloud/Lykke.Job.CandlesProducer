@@ -99,15 +99,22 @@ namespace Lykke.Job.CandlesProducer.Modules
                 _services.UseAssetsClient(AssetServiceSettings.Create(
                 _assetsSettings,
                 _settings.AssetsCache.ExpirationPeriod));
+
+
+                builder.RegisterType<AssetPairsManager>()
+                        .As<IAssetPairsManager>()
+                        .SingleInstance();
             }
             else
             {
                 builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl);
+
+
+                builder.RegisterType<MtAssetPairsManager>()
+                        .As<IAssetPairsManager>()
+                        .SingleInstance();
             }
 
-            builder.RegisterType<AssetPairsManager>()
-                    .As<IAssetPairsManager>()
-                    .SingleInstance();
         }
 
         private void RegisterCandlesServices(ContainerBuilder builder)
