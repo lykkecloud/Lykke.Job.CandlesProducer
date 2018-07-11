@@ -27,6 +27,7 @@ using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 using MarginTrading.SettingsService.Contracts;
 using Lykke.HttpClientGenerator;
+using Lykke.Logs.MsSql;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
@@ -184,8 +185,14 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             if (_settings.Db.StorageMode == StorageMode.SqlServer)
             {
-                var sqlSnapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SqlConnectionString);
-                int i = 32;
+                var connstrParameter = new NamedParameter("connectionString",
+                    _settings.Db.SqlConnectionString);
+
+                builder.RegisterType<LogMsSql>()
+                    .As<ILogMsSql>()
+                    .WithParameter(connstrParameter)
+                    .SingleInstance();
+
             }
             else if (_settings.Db.StorageMode == StorageMode.Azure)
             {
