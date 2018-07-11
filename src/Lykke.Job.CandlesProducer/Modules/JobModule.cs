@@ -165,23 +165,33 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<CandlesManager>()
                 .As<ICandlesManager>();
 
-            var snapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SnapshotsConnectionString);
+            if (_settings.Db.StorageMode == StorageMode.SqlServer)
+            {
+                var sqlSnapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SqlConnectionString);
+                int i = 32;
+            }
+            else if (_settings.Db.StorageMode == StorageMode.Azure)
+            {
+                var snapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SnapshotsConnectionString);
 
-            builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
+                builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
+                    .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
+                    .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
 
-            builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
-                .As<ISnapshotSerializer>();
+                builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
+                    .As<ISnapshotSerializer>();
 
-            builder.RegisterType<CandlesGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))))
-                .SingleInstance();
+                builder.RegisterType<CandlesGeneratorSnapshotRepository>()
+                    .As<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>()
+                    .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))))
+                    .SingleInstance();
 
-            builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
-                .As<ISnapshotSerializer>()
-                .PreserveExistingDefaults();
+                builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
+                    .As<ISnapshotSerializer>()
+                    .PreserveExistingDefaults();
+            }
+
+         
         }
     }
 }
