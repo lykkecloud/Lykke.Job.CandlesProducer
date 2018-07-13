@@ -46,7 +46,7 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
                 if (string.IsNullOrEmpty(data))
                     return null;
 
-                var model = JsonConvert.DeserializeObject<Dictionary<string, MarketStateEntity>>(data);
+                var model = JsonConvert.DeserializeObject<Dictionary<string, CandleEntity>>(data);
 
                 return model.ToImmutableDictionary(i => i.Key, i => (ICandle)i.Value);
             }
