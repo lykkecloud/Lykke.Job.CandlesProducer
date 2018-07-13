@@ -202,6 +202,14 @@ namespace Lykke.Job.CandlesProducer.Modules
                 builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
                     .As<ISnapshotSerializer>();
 
+                builder.Register<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>(ctx =>
+                        new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
+                    .SingleInstance();
+
+
+                builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
+                    .As<ISnapshotSerializer>();
+
             }
             else if (_settings.Db.StorageMode == StorageMode.Azure)
             {
