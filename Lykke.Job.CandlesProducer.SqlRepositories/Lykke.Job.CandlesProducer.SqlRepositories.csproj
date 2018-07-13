@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="1.50.5" />
+    <PackageReference Include="MessagePack" Version="1.7.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\Lykke.Job.CandlesProducer.AzureRepositories\Lykke.Job.CandlesProducer.AzureRepositories.csproj" />
+    <ProjectReference Include="..\src\Lykke.Job.CandlesProducer.Core\Lykke.Job.CandlesProducer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

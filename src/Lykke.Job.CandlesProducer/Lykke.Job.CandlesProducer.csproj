@@ -33,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Lykke.Job.CandlesProducer.SqlRepositories\Lykke.Job.CandlesProducer.SqlRepositories.csproj" />
     <ProjectReference Include="..\Lykke.Job.CandlesProducer.AzureRepositories\Lykke.Job.CandlesProducer.AzureRepositories.csproj" />
     <ProjectReference Include="..\Lykke.Job.CandlesProducer.Core\Lykke.Job.CandlesProducer.Core.csproj" />
     <ProjectReference Include="..\Lykke.Job.CandlesProducer.Services\Lykke.Job.CandlesProducer.Services.csproj" />
