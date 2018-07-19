@@ -9,14 +9,16 @@ using Dapper;
 using Lykke.Job.CandlesProducer.AzureRepositories;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
-using Lykke.Job.CandlesProducer.SqlRepositories.Extensions;
 using Newtonsoft.Json;
+using Lykke.Logs.MsSql.Extensions;
+using Microsoft.Extensions.Internal;
 
 namespace Lykke.Job.CandlesProducer.SqlRepositories
 {
     public class SqlCandlesGeneratorSnapshotRepository : ISnapshotRepository<ImmutableDictionary<string, ICandle>>
     {
         private const string TableName = "CandlesGeneratorSnapshot";
+        private const string BlobKey = "CandlesGenerator";
         private const string CreateTableScript = "CREATE TABLE [{0}](" +
                                                  "[BlobKey] [nvarchar] (64) NOT NULL PRIMARY KEY, " +
                                                  "[Data] [nvarchar] (MAX) NULL, " +
@@ -24,11 +26,12 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
                                                  ");";
 
         private readonly string _connectionString;
+        private readonly ISystemClock _systemClock;
 
         public SqlCandlesGeneratorSnapshotRepository(string connectionString)
         {
+            _systemClock = new SystemClock();
             _connectionString = connectionString;
-
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.CreateTableIfDoesntExists(CreateTableScript, TableName);
@@ -41,7 +44,7 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
             {
                 var data = (await conn.QueryAsync<string>(
                     $"SELECT Data FROM {TableName} WHERE BlobKey=@blobKey",
-                    new { blobKey = "CandlesGeneratorSnapshot" })).SingleOrDefault();
+                    new {blobKey = BlobKey })).SingleOrDefault();
 
                 if (string.IsNullOrEmpty(data))
                     return null;
@@ -60,8 +63,8 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
             var request = new
             {
                 data = JsonConvert.SerializeObject(model),
-                blobKey = "CandlesGeneratorSnapshot",
-                timestamp = DateTime.Now
+                blobKey = BlobKey,
+                timestamp = _systemClock.UtcNow.UtcDateTime
             };
 
             using (var conn = new SqlConnection(_connectionString))

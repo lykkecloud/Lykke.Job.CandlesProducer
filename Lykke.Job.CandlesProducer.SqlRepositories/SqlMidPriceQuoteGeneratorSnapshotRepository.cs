@@ -9,16 +9,18 @@ using Dapper;
 using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
-using Lykke.Job.CandlesProducer.SqlRepositories.Extensions;
 using MessagePack;
 using Newtonsoft.Json;
 using Lykke.Job.CandlesProducer.AzureRepositories;
+using Lykke.Logs.MsSql.Extensions;
+using Microsoft.Extensions.Internal;
 
 namespace Lykke.Job.CandlesProducer.SqlRepositories
 {
     public class SqlMidPriceQuoteGeneratorSnapshotRepository : ISnapshotRepository<IImmutableDictionary<string, IMarketState>>
     {
         private const string TableName = "MidPriceQuoteGeneratorSnapshot";
+        private const string BlobKey = "MidPriceQuoteGenerator";
         private const string CreateTableScript = "CREATE TABLE [{0}](" +
                                                  "[BlobKey] [nvarchar] (64) NOT NULL PRIMARY KEY, " +
                                                  "[Data] [nvarchar] (MAX) NULL, " +
@@ -26,11 +28,12 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
                                                  ");";
 
         private readonly string _connectionString;
+        private readonly ISystemClock _systemClock;
 
-        public SqlMidPriceQuoteGeneratorSnapshotRepository(string connectionString)
+        public SqlMidPriceQuoteGeneratorSnapshotRepository( string connectionString)
         {
+            _systemClock = new SystemClock();
             _connectionString = connectionString;
-
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.CreateTableIfDoesntExists(CreateTableScript, TableName);
@@ -41,9 +44,9 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var data = (await conn.QueryAsync<string>(
+                 var data = (await conn.QueryAsync<string>(
                     $"SELECT Data FROM {TableName} WHERE BlobKey=@blobKey",
-                    new { blobKey = "MidPriceQuoteGeneratorSnapshot" })).SingleOrDefault();
+                    new {blobKey = BlobKey })).SingleOrDefault();
 
                 if (string.IsNullOrEmpty(data))
                     return null;
@@ -62,8 +65,8 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
                 var request = new
                 {
                     data = JsonConvert.SerializeObject(model),
-                    blobKey = "MidPriceQuoteGeneratorSnapshot",
-                    timestamp = DateTime.Now
+                    blobKey = BlobKey,
+                    timestamp = _systemClock.UtcNow.UtcDateTime
                 };
 
                 using (var conn = new SqlConnection(_connectionString))
