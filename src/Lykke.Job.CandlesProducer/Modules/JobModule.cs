@@ -189,11 +189,6 @@ namespace Lykke.Job.CandlesProducer.Modules
                 var connstrParameter = new NamedParameter("connectionString",
                     _settings.Db.SqlConnectionString);
 
-                builder.RegisterType<LogMsSql>()
-                    .As<ILogMsSql>()
-                    .WithParameter(connstrParameter)
-                    .SingleInstance();
-
                 builder.Register<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>(ctx =>
                         new SqlMidPriceQuoteGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
                     .SingleInstance();
