@@ -31,7 +31,11 @@ namespace Lykke.Job.CandlesProducer.SqlRepositories
         public async Task<ImmutableDictionary<string, ICandle>> TryGetAsync()
         {
             var model = _blobRepository.Read<Dictionary<string, CandleEntity>>(BlobContainer, Key);
-            return model.ToImmutableDictionary(i => i.Key, i => (ICandle)i.Value); ;
+            if (model != null)
+            {
+                return model.ToImmutableDictionary(i => i.Key, i => (ICandle)i.Value);
+            }
+            return new Dictionary<string,ICandle>().ToImmutableDictionary();
         }
 
         public async Task SaveAsync(ImmutableDictionary<string, ICandle> state)
