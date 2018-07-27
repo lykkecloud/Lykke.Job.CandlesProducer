@@ -43,9 +43,13 @@ namespace MarginTrading.SqlRepositories
                     $"SELECT Data FROM {TableName} WHERE BlobKey=@blobKey",
                     new { blobKey = $"{blobContainer}_{key}" })).SingleOrDefault();
 
-                if (string.IsNullOrEmpty(data))
+                if (string.IsNullOrEmpty(data) || data == "{}" )
                     return default(T);
 
+                var settings = new JsonSerializerSettings()
+                {
+                    TypeNameHandling = TypeNameHandling.All
+                };
                 return JsonConvert.DeserializeObject<T>(data);
             }
         }
