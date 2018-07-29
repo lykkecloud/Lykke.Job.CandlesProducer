@@ -27,6 +27,8 @@ using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 using MarginTrading.SettingsService.Contracts;
 using Lykke.HttpClientGenerator;
+using Lykke.Logs.MsSql;
+using Lykke.Job.CandlesProducer.SqlRepositories;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
@@ -182,23 +184,50 @@ namespace Lykke.Job.CandlesProducer.Modules
             builder.RegisterType<CandlesManager>()
                 .As<ICandlesManager>();
 
-            var snapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SnapshotsConnectionString);
+            if (_settings.Db.StorageMode == StorageMode.SqlServer)
+            {
+                var connstrParameter = new NamedParameter("connectionString",
+                    _settings.Db.SqlConnectionString);
 
-            builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
+                builder.Register<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>(ctx =>
+                        new SqlMidPriceQuoteGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
+                    .SingleInstance();
 
-            builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
-                .As<ISnapshotSerializer>();
 
-            builder.RegisterType<CandlesGeneratorSnapshotRepository>()
-                .As<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>()
-                .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))))
-                .SingleInstance();
+                builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
+                    .As<ISnapshotSerializer>();
 
-            builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
-                .As<ISnapshotSerializer>()
-                .PreserveExistingDefaults();
+                builder.Register<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>(ctx =>
+                        new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
+                    .SingleInstance();
+
+
+                builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
+                    .As<ISnapshotSerializer>();
+
+            }
+            else if (_settings.Db.StorageMode == StorageMode.Azure)
+            {
+                var snapshotsConnStringManager = _dbSettings.ConnectionString(x => x.SnapshotsConnectionString);
+
+                builder.RegisterType<MidPriceQuoteGeneratorSnapshotRepository>()
+                    .As<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>()
+                    .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))));
+
+                builder.RegisterType<SnapshotSerializer<IImmutableDictionary<string, IMarketState>>>()
+                    .As<ISnapshotSerializer>();
+
+                builder.RegisterType<CandlesGeneratorSnapshotRepository>()
+                    .As<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>()
+                    .WithParameter(TypedParameter.From(AzureBlobStorage.Create(snapshotsConnStringManager, maxExecutionTimeout: TimeSpan.FromMinutes(5))))
+                    .SingleInstance();
+
+                builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
+                    .As<ISnapshotSerializer>()
+                    .PreserveExistingDefaults();
+            }
+
+         
         }
     }
 }
