@@ -8,7 +8,5 @@ namespace Lykke.Job.CandlesProducer.Settings
         public StorageMode StorageMode { get; set; }
         public string LogsConnString { get; set; }
         public string SnapshotsConnectionString { get; set; }
-        [SqlCheck]
-        public string SqlConnectionString { get; set; }
     }
 }
