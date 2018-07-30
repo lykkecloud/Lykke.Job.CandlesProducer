@@ -74,6 +74,7 @@ namespace Lykke.Job.CandlesProducer.Modules
         {
             var monitorSettings = _settings.ResourceMonitor;
 
+            if(monitorSettings != null)
             switch (monitorSettings.MonitorMode)
             {
                 case ResourceMonitorMode.Off:
@@ -187,10 +188,10 @@ namespace Lykke.Job.CandlesProducer.Modules
             if (_settings.Db.StorageMode == StorageMode.SqlServer)
             {
                 var connstrParameter = new NamedParameter("connectionString",
-                    _settings.Db.SqlConnectionString);
+                    _settings.Db.SnapshotsConnectionString);
 
                 builder.Register<ISnapshotRepository<IImmutableDictionary<string, IMarketState>>>(ctx =>
-                        new SqlMidPriceQuoteGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
+                        new SqlMidPriceQuoteGeneratorSnapshotRepository(_settings.Db.SnapshotsConnectionString))
                     .SingleInstance();
 
 
@@ -198,7 +199,7 @@ namespace Lykke.Job.CandlesProducer.Modules
                     .As<ISnapshotSerializer>();
 
                 builder.Register<ISnapshotRepository<ImmutableDictionary<string, ICandle>>>(ctx =>
-                        new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SqlConnectionString))
+                        new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SnapshotsConnectionString))
                     .SingleInstance();
 
 

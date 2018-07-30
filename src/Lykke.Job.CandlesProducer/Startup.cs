@@ -76,7 +76,7 @@ namespace Lykke.Job.CandlesProducer
                 Log = CreateLogWithSlack(
                     services,
                     appSettings.CurrentValue.SlackNotifications,
-                    jobSettings.ConnectionString(x => x.Db.SqlConnectionString),
+                    jobSettings.ConnectionString(x => x.Db.LogsConnString),
                     jobSettings.CurrentValue.Db.StorageMode);
             }
 
