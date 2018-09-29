@@ -15,6 +15,7 @@ using Lykke.Job.CandlesProducer.Modules;
 using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Logs;
 using Lykke.Logs.MsSql;
+using Lykke.Logs.MsSql.Repositories;
 using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
@@ -63,24 +64,11 @@ namespace Lykke.Job.CandlesProducer
                 ? appSettings.Nested(x => x.CandlesProducerJob) 
                 : appSettings.Nested(x => x.MtCandlesProducerJob);
 
-            if (jobSettings.CurrentValue.Db.StorageMode == StorageMode.Azure)
-            {
-                Log = CreateLogWithSlack(
-                    services,
-                    appSettings.CurrentValue.SlackNotifications,
-                    jobSettings.ConnectionString(x => x.Db.LogsConnString),
-                    jobSettings.CurrentValue.Db.StorageMode);
-            }
-            else if (jobSettings.CurrentValue.Db.StorageMode == StorageMode.SqlServer)
-            {
-                Log = CreateLogWithSlack(
-                    services,
-                    appSettings.CurrentValue.SlackNotifications,
-                    jobSettings.ConnectionString(x => x.Db.LogsConnString),
-                    jobSettings.CurrentValue.Db.StorageMode);
-            }
-
-           
+            Log = CreateLogWithSlack(
+                services,
+                appSettings.CurrentValue.SlackNotifications,
+                jobSettings.ConnectionString(x => x.Db.LogsConnString),
+                jobSettings.CurrentValue.Db.StorageMode);
             
             builder.RegisterModule(new JobModule(
                 jobSettings.CurrentValue, 
@@ -170,7 +158,8 @@ namespace Lykke.Job.CandlesProducer
         }
 
         private static ILog CreateLogWithSlack(IServiceCollection services, SlackNotificationsSettings slackSettings, IReloadingManager<string> dbLogConnectionStringManager, StorageMode smode)
-        {            
+        {
+            var tableName = "CandlesProducerServiceLog";
             var consoleLogger = new LogToConsole();
             var aggregateLogger = new AggregateLogger();
 
@@ -194,20 +183,19 @@ namespace Lykke.Job.CandlesProducer
 
             if (smode == StorageMode.SqlServer)
             {
-                var sqlLogger = new LogToSql(new LogMsSql("CandlesProducerServiceLog",
-                    dbLogConnectionStringManager.CurrentValue));
-
-                aggregateLogger.AddLog(sqlLogger);
+                aggregateLogger.AddLog(
+                    new LogToSql(new SqlLogRepository(tableName, dbLogConnectionStringManager.CurrentValue)));
             }
             else if (smode == StorageMode.Azure)
             {
                 var dbLogConnectionString = dbLogConnectionStringManager.CurrentValue;
 
-                // Creating azure storage logger, which logs own messages to concole log
-                if (!string.IsNullOrEmpty(dbLogConnectionString) && !(dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}")))
+                // Creating azure storage logger, which logs own messages to console log
+                if (!string.IsNullOrEmpty(dbLogConnectionString) && !(dbLogConnectionString.StartsWith("${") 
+                                                                      && dbLogConnectionString.EndsWith("}")))
                 {
                     var persistenceManager = new LykkeLogToAzureStoragePersistenceManager(
-                        AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "CandlesProducerLog", consoleLogger),
+                        AzureTableStorage<Logs.LogEntity>.Create(dbLogConnectionStringManager, tableName, consoleLogger),
                         consoleLogger);
 
                     var azureStorageLogger = new LykkeLogToAzureStorage(
