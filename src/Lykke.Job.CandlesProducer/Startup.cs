@@ -183,7 +183,7 @@ namespace Lykke.Job.CandlesProducer
                 aggregateLogger.AddLog(logToSlack);
             }
 
-            if (settings.CurrentValue.UseSerilog)
+            if (settings.CurrentValue.MtCandlesProducerJob.UseSerilog)
             {
                 aggregateLogger.AddLog(new SerilogLogger(typeof(Startup).Assembly, configuration));
             }

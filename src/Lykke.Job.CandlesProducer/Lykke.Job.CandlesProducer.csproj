@@ -46,6 +46,4 @@
     <ProjectReference Include="..\Lykke.Job.CandlesProducer.Core\Lykke.Job.CandlesProducer.Core.csproj" />
     <ProjectReference Include="..\Lykke.Job.CandlesProducer.Services\Lykke.Job.CandlesProducer.Services.csproj" />
   </ItemGroup>
-
-  <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 </Project>
