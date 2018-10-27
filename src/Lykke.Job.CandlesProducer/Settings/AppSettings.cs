@@ -17,8 +17,5 @@ namespace Lykke.Job.CandlesProducer.Settings
         public SlackNotificationsSettings SlackNotifications { get; set; }
         
         public AssetsSettings Assets { get; set; }
-        
-        [Optional]
-        public bool UseSerilog { get; set; }
     }
 }
