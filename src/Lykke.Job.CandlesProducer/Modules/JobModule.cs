@@ -27,6 +27,8 @@ using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 using MarginTrading.SettingsService.Contracts;
 using Lykke.HttpClientGenerator;
+using Lykke.HttpClientGenerator.Caching;
+using Lykke.Job.CandlesProducer.CachingStrategies;
 using Lykke.Logs.MsSql;
 using Lykke.Job.CandlesProducer.SqlRepositories;
 
@@ -96,13 +98,11 @@ namespace Lykke.Job.CandlesProducer.Modules
 
         private void RegisterAssetsServices(ContainerBuilder builder)
         {
-
             if (_quotesSourceType == QuotesSourceType.Spot)
             {
                 _services.UseAssetsClient(AssetServiceSettings.Create(
                 _assetsSettings,
                 _settings.AssetsCache.ExpirationPeriod));
-
 
                 builder.RegisterType<AssetPairsManager>()
                         .As<IAssetPairsManager>()
@@ -110,14 +110,14 @@ namespace Lykke.Job.CandlesProducer.Modules
             }
             else
             {
-                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl);
-
+                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl, 
+                    generatorBuilder => generatorBuilder
+                        .WithCachingStrategy(new PlainTimeoutCachingStrategy(_settings.AssetsCache.ExpirationPeriod)));
 
                 builder.RegisterType<MtAssetPairsManager>()
                         .As<IAssetPairsManager>()
                         .SingleInstance();
             }
-
         }
 
         private void RegisterCandlesServices(ContainerBuilder builder)
