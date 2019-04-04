@@ -10,6 +10,7 @@
     <PackageReference Include="Lykke.Job.QuotesProducer.Contract" Version="1.0.0" />
     <PackageReference Include="Lykke.RabbitMqBroker" Version="7.0.0" />
     <PackageReference Include="Lykke.Service.Assets.Client" Version="1.0.17" />
+    <PackageReference Include="Lykke.SettingsReader" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>

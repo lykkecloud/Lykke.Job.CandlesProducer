@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Core.Settings;
 using Lykke.SettingsReader.Attributes;
 
 namespace Lykke.Job.CandlesProducer.Settings
