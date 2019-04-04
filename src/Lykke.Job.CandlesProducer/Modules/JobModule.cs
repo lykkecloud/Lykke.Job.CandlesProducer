@@ -111,7 +111,7 @@ namespace Lykke.Job.CandlesProducer.Modules
                     .As<IAssetPairsManager>()
                     .SingleInstance()
                     .OnActivated(args => args.Instance.Start())
-                    .WithParameter(new TypedParameter(typeof(int), _settings.AssetsCache.AssetPairsRefreshPeriodMs));
+                    .WithParameter(new TypedParameter(typeof(TimeSpan), _settings.AssetsCache.ExpirationPeriod));
             }
         }
 

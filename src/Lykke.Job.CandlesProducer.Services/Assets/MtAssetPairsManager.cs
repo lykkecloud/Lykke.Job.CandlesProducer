@@ -19,8 +19,8 @@ namespace Lykke.Job.CandlesProducer.Services.Assets
         private Dictionary<string, AssetPair> _cache = new Dictionary<string, AssetPair>();
         private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
 
-        public MtAssetPairsManager(IAssetPairsApi assetPairsApi, int assetPairsRefreshPeriodMs, ILog log)
-            : base(nameof(MtAssetPairsManager), assetPairsRefreshPeriodMs, log)
+        public MtAssetPairsManager(IAssetPairsApi assetPairsApi, TimeSpan expirationPeriod, ILog log)
+            : base(nameof(MtAssetPairsManager), (int)expirationPeriod.TotalMilliseconds, log)
         {
             _assetPairsApi = assetPairsApi;
         }
