@@ -27,7 +27,6 @@ using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 using MarginTrading.SettingsService.Contracts;
 using Lykke.HttpClientGenerator;
-using Lykke.Logs.MsSql;
 using Lykke.Job.CandlesProducer.SqlRepositories;
 
 namespace Lykke.Job.CandlesProducer.Modules
@@ -53,13 +52,9 @@ namespace Lykke.Job.CandlesProducer.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
-            builder.RegisterInstance(_log)
-                .As<ILog>()
-                .SingleInstance();
+            builder.RegisterInstance(_log).As<ILog>().SingleInstance();
 
-            builder.RegisterType<HealthService>()
-                .As<IHealthService>()
-                .SingleInstance();
+            builder.RegisterType<HealthService>().As<IHealthService>().SingleInstance();
 
             RegisterResourceMonitor(builder);
 
@@ -96,13 +91,11 @@ namespace Lykke.Job.CandlesProducer.Modules
 
         private void RegisterAssetsServices(ContainerBuilder builder)
         {
-
             if (_quotesSourceType == QuotesSourceType.Spot)
             {
                 _services.UseAssetsClient(AssetServiceSettings.Create(
                 _assetsSettings,
                 _settings.AssetsCache.ExpirationPeriod));
-
 
                 builder.RegisterType<AssetPairsManager>()
                         .As<IAssetPairsManager>()
@@ -110,14 +103,16 @@ namespace Lykke.Job.CandlesProducer.Modules
             }
             else
             {
-                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl);
-
+                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl, 
+                    generatorBuilder => generatorBuilder);
 
                 builder.RegisterType<MtAssetPairsManager>()
-                        .As<IAssetPairsManager>()
-                        .SingleInstance();
+                    .AsSelf()
+                    .As<IAssetPairsManager>()
+                    .SingleInstance()
+                    .OnActivated(args => args.Instance.Start())
+                    .WithParameter(new TypedParameter(typeof(TimeSpan), _settings.AssetsCache.ExpirationPeriod));
             }
-
         }
 
         private void RegisterCandlesServices(ContainerBuilder builder)

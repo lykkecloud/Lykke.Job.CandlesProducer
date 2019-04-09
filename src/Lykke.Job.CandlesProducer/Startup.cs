@@ -12,6 +12,7 @@ using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Models;
 using Lykke.Job.CandlesProducer.Modules;
+using Lykke.Job.CandlesProducer.Services.Assets;
 using Lykke.Job.CandlesProducer.Settings;
 using Lykke.Logs;
 using Lykke.Logs.MsSql;
@@ -76,6 +77,11 @@ namespace Lykke.Job.CandlesProducer
                 jobSettings.Nested(x => x.Db), 
                 appSettings.CurrentValue.Assets,
                 quotesSourceType, Log));
+
+            if (quotesSourceType == QuotesSourceType.Mt)
+            {
+                builder.RegisterBuildCallback(c => c.Resolve<MtAssetPairsManager>());
+            }
 
             builder.Populate(services);
 

@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Core.Settings;
 using Lykke.SettingsReader.Attributes;
 
 namespace Lykke.Job.CandlesProducer.Settings
@@ -6,7 +7,7 @@ namespace Lykke.Job.CandlesProducer.Settings
     [UsedImplicitly]
     public class CandlesProducerSettings
     {
-        [Optional , CanBeNull]
+        [Optional, CanBeNull]
         public ResourceMonitorSettings ResourceMonitor { get; set; }
         
         public DbSettings Db { get; set; }
