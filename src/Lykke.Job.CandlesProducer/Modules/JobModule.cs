@@ -158,7 +158,8 @@ namespace Lykke.Job.CandlesProducer.Modules
                 builder.RegisterType<MtTradesSubscriber>()
                     .As<ITradesSubscriber>()
                     .SingleInstance()
-                    .WithParameter(TypedParameter.From(_settings.Rabbit.TradesSubscription.ConnectionString));
+                    .WithParameter(TypedParameter.From(_settings.Rabbit.TradesSubscription.ConnectionString))
+                    .WithParameter(TypedParameter.From(_settings.CandlesGenerator.GenerateTrades));
             }
 
             builder.RegisterType<CandlesPublisher>()
@@ -178,7 +179,9 @@ namespace Lykke.Job.CandlesProducer.Modules
                 .WithParameter(TypedParameter.From(_settings.CandlesGenerator.OldDataWarningTimeout));
 
             builder.RegisterType<CandlesManager>()
-                .As<ICandlesManager>();
+                .As<ICandlesManager>()
+                .WithParameter(TypedParameter.From(_settings.CandlesGenerator.TimeIntervals))
+                .WithParameter(TypedParameter.From(_settings.CandlesGenerator.GenerateBidAndAsk));
 
             if (_settings.Db.StorageMode == StorageMode.SqlServer)
             {
