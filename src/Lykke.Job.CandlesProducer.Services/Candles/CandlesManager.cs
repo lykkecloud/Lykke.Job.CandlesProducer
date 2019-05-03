@@ -19,17 +19,23 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         private readonly IAssetPairsManager _assetPairsManager;
         private readonly ICandlesGenerator _candlesGenerator;
         private readonly ICandlesPublisher _publisher;
+        private readonly CandleTimeInterval[] _intervals;
+        private readonly bool _generateBidAndAsk;
 
         public CandlesManager(
             IMidPriceQuoteGenerator midPriceQuoteGenerator,
             IAssetPairsManager assetPairsManager,
             ICandlesGenerator candlesGenerator,
-            ICandlesPublisher publisher)
+            ICandlesPublisher publisher,
+            CandleTimeInterval[] intervals,
+            bool generateBidAndAsk)
         {
             _midPriceQuoteGenerator = midPriceQuoteGenerator;
             _assetPairsManager = assetPairsManager;
             _candlesGenerator = candlesGenerator;
             _publisher = publisher;
+            _intervals = intervals;
+            _generateBidAndAsk = generateBidAndAsk;
         }
 
         public async Task ProcessQuoteAsync(QuoteMessage quote)
@@ -53,8 +59,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             {
                 // Updates all intervals in parallel
 
-                var processingTasks = Constants
-                    .PublishedIntervals
+                var processingTasks = _intervals
                     .Select(timeInterval => Task.Factory.StartNew(() =>
                     {
                         ProcessQuoteInterval(
@@ -97,8 +102,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             {
                 // Updates all intervals in parallel
 
-                var processingTasks = Constants
-                    .PublishedIntervals
+                var processingTasks = _intervals
                     .Select(timeInterval => Task.Factory.StartNew(() =>
                     {
                         ProcessTradeInterval(
@@ -144,16 +148,19 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         {
             // Updates ask/bid candle
 
-            var candleUpdateResult = _candlesGenerator.UpdateQuotingCandle(
-                assetPair,
-                timestamp,
-                price,
-                isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
-                timeInterval);
-
-            if (candleUpdateResult.WasChanged)
+            if (_generateBidAndAsk)
             {
-                changedUpdateResults.Add(candleUpdateResult);
+                var candleUpdateResult = _candlesGenerator.UpdateQuotingCandle(
+                    assetPair,
+                    timestamp,
+                    price,
+                    isBuy ? CandlePriceType.Bid : CandlePriceType.Ask,
+                    timeInterval);
+
+                if (candleUpdateResult.WasChanged)
+                {
+                    changedUpdateResults.Add(candleUpdateResult);
+                }
             }
 
             // Updates mid candle

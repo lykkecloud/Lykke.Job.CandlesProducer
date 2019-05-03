@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using JetBrains.Annotations;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Trades;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
@@ -18,19 +19,28 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
         private readonly ICandlesManager _candlesManager;
         private readonly IRabbitMqSubscribersFactory _subscribersFactory;
         private readonly string _connectionString;
+        private readonly bool _isEnabled;
+        private readonly CandleTimeInterval[] _intervals;
         private IStopable _tradesSubscriber;
 
-        public MtTradesSubscriber(ILog log, ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, string connectionString)
+        public MtTradesSubscriber(ILog log, 
+            ICandlesManager candlesManager, 
+            IRabbitMqSubscribersFactory subscribersFactory, 
+            string connectionString,
+            bool isEnabled)
         {
             _log = log?.CreateComponentScope(nameof(MtTradesSubscriber)) ?? throw new ArgumentNullException(nameof(log));
             _candlesManager = candlesManager;
             _subscribersFactory = subscribersFactory;
             _connectionString = connectionString;
+            _isEnabled = isEnabled;
         }
 
         public void Start()
         {
-            _tradesSubscriber = _subscribersFactory.Create<MtTradeMessage>(_connectionString, "lykke.mt", "trades", ProcessTradeAsync, "-v2");
+            if (_isEnabled)
+                _tradesSubscriber = _subscribersFactory.Create<MtTradeMessage>(_connectionString, "lykke.mt", "trades",
+                    ProcessTradeAsync, "-v2");
         }
 
         private async Task ProcessTradeAsync(MtTradeMessage message)
