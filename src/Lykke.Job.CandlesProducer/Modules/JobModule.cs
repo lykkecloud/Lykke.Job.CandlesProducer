@@ -137,7 +137,8 @@ namespace Lykke.Job.CandlesProducer.Modules
                         : typeof(MtQuotesSubscriber))
                     .As<IQuotesSubscriber>()
                     .SingleInstance()
-                    .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion));
+                    .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion))
+                    .WithParameter(TypedParameter.From(_settings.Rabbit.QuoteConsumersCount));
             }
             else
             {
