@@ -22,12 +22,13 @@ using Lykke.Job.CandlesProducer.Services.Quotes.Spot;
 using Lykke.Job.CandlesProducer.Services.Trades.Mt;
 using Lykke.Job.CandlesProducer.Services.Trades.Spot;
 using Lykke.Job.CandlesProducer.Settings;
-using Lykke.Service.Assets.Client.Custom;
 using Lykke.SettingsReader;
 using Microsoft.Extensions.DependencyInjection;
 using MarginTrading.SettingsService.Contracts;
 using Lykke.HttpClientGenerator;
 using Lykke.Job.CandlesProducer.SqlRepositories;
+using Lykke.Service.Assets.Client.Custom;
+using AssetsSettings = Lykke.Job.CandlesProducer.Settings.AssetsSettings;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
@@ -40,7 +41,8 @@ namespace Lykke.Job.CandlesProducer.Modules
         private readonly IServiceCollection _services;
         private readonly QuotesSourceType _quotesSourceType;
 
-        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings, AssetsSettings assetsSettings, QuotesSourceType quotesSourceType, ILog log)
+        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings, 
+            AssetsSettings assetsSettings, QuotesSourceType quotesSourceType, ILog log)
         {
             _settings = settings;
             _dbSettings = dbSettings;
@@ -94,7 +96,7 @@ namespace Lykke.Job.CandlesProducer.Modules
             if (_quotesSourceType == QuotesSourceType.Spot)
             {
                 _services.UseAssetsClient(AssetServiceSettings.Create(
-                _assetsSettings,
+                    new Uri(_assetsSettings.ServiceUrl),
                 _settings.AssetsCache.ExpirationPeriod));
 
                 builder.RegisterType<AssetPairsManager>()
@@ -103,8 +105,15 @@ namespace Lykke.Job.CandlesProducer.Modules
             }
             else
             {
-                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl, 
-                    generatorBuilder => generatorBuilder);
+                builder.RegisterClient<IAssetPairsApi>(_assetsSettings.ServiceUrl, builderConfigure =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(_assetsSettings.ApiKey))
+                        {
+                            builderConfigure = builderConfigure.WithApiKey(_assetsSettings.ApiKey);
+                        }
+
+                        return builderConfigure;
+                    });
 
                 builder.RegisterType<MtAssetPairsManager>()
                     .AsSelf()
