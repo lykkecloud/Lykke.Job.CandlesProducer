@@ -1,4 +1,7 @@
-﻿using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+﻿// Copyright (c) 2019 Lykke Corp.
+// See the LICENSE file in the project root for more information.
+
+using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes
 {
