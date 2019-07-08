@@ -1,4 +1,7 @@
-﻿using Lykke.Job.CandlesProducer.Core.Domain.Candles;
+﻿// Copyright (c) 2019 Lykke Corp.
+// See the LICENSE file in the project root for more information.
+
+using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using MessagePack;
 
 namespace Lykke.Job.CandlesProducer.AzureRepositories

@@ -1,4 +1,7 @@
-﻿using Lykke.RabbitMqBroker.Publisher;
+﻿// Copyright (c) 2019 Lykke Corp.
+// See the LICENSE file in the project root for more information.
+
+using Lykke.RabbitMqBroker.Publisher;
 
 namespace Lykke.Job.CandlesProducer.Core.Services
 {
