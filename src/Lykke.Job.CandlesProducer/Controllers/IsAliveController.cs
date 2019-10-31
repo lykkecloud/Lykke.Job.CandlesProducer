@@ -6,7 +6,7 @@ using System.Net;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Models;
 using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.SwaggerGen.Annotations;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Lykke.Job.CandlesProducer.Controllers
 {
