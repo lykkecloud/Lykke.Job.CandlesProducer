@@ -153,7 +153,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                         nameof(CandlesGenerator),
                         nameof(Update),
                         getLoggingContext(candle).ToJson(),
-                        $"Incoming data is too old to update the candle. No candle will be altered. Original timestamp: {timestamp:O}. New candle timestamp: {candleTimestamp:0}. Existing candle timestamp: {candle.Timestamp:0}. Existing candle last update: {candle.LatestChangeTimestamp:O}").Wait();
+                        $"Incoming data is too old to update the candle. No candle will be altered. Original timestamp: {timestamp:O}. New candle timestamp: {candleTimestamp:O}. Existing candle timestamp: {candle.Timestamp:O}. Existing candle last update: {candle.LatestChangeTimestamp:O}").Wait();
 
                     return candle;
                 });
