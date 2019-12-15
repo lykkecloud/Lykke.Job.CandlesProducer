@@ -21,15 +21,18 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
         private readonly ICandlesManager _candlesManager;
         private readonly IRabbitMqSubscribersFactory _subscribersFactory;
         private readonly string _connectionString;
+        private readonly bool _skipEodQuote;
 
         private IStopable _subscriber;
 
-        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, IRabbitMqSubscribersFactory subscribersFactory, string connectionString)
+        public MtQuotesSubscriber(ILog log, ICandlesManager candlesManager, 
+            IRabbitMqSubscribersFactory subscribersFactory, string connectionString, bool skipEodQuote)
         {
             _log = log;
             _candlesManager = candlesManager;
             _subscribersFactory = subscribersFactory;
             _connectionString = connectionString;
+            _skipEodQuote = skipEodQuote;
         }
 
         public void Start()
@@ -96,7 +99,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
             }
         }
 
-        private static IReadOnlyCollection<string> ValidateQuote(MtQuoteMessage quote)
+        private IReadOnlyCollection<string> ValidateQuote(MtQuoteMessage quote)
         {
             var errors = new List<string>();
 
@@ -113,6 +116,10 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
                 if (quote.Date.Kind != DateTimeKind.Utc)
                 {
                     errors.Add($"Invalid 'Date' Kind (UTC is required): '{quote.Date.Kind}'");
+                }
+                if (_skipEodQuote && Math.Abs(quote.Bid - quote.Ask) < 1E-12)//todo discuss the check
+                {
+                    errors.Add($"Skipping EOD quote");
                 }
             }
 
