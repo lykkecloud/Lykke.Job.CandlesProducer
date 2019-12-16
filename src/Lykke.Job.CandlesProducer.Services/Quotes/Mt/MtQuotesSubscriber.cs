@@ -117,7 +117,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
                 {
                     errors.Add($"Invalid 'Date' Kind (UTC is required): '{quote.Date.Kind}'");
                 }
-                if (_skipEodQuote && Math.Abs(quote.Bid - quote.Ask) < 1E-12)//todo discuss the check
+                if (_skipEodQuote && (quote?.IsEod ?? false))
                 {
                     errors.Add($"Skipping EOD quote");
                 }
