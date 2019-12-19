@@ -23,5 +23,8 @@ namespace Lykke.Job.CandlesProducer.Settings
         
         [Optional]
         public bool UseSerilog { get; set; }
+
+        [Optional]
+        public bool SkipEodQuote { get; set; } = true;
     }
 }

@@ -3,6 +3,7 @@
 
 using System;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages
 {
@@ -20,5 +21,9 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages
 
         [UsedImplicitly(ImplicitUseKindFlags.Assign)]
         public double Ask { get; set; }
+        
+        [UsedImplicitly(ImplicitUseKindFlags.Assign)]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public bool? IsEod { get; set; }
     }
 }
