@@ -11,6 +11,7 @@ using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
+using Lykke.Job.CandlesProducer.Core.Domain.Quotes;
 using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
@@ -41,7 +42,78 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             _generateBidAndAsk = generateBidAndAsk;
         }
 
-        public async Task ProcessQuoteAsync(QuoteMessage quote)
+        public async Task ProcessMtQuoteAsync(MtQuoteDto mtQuote)
+        {
+            if (mtQuote == null)
+                throw new ArgumentNullException(nameof(mtQuote));
+            
+            var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(mtQuote.AssetPair?.Trim());
+
+            if (assetPair == null)
+            {
+                return;
+            }
+            
+            var changedUpdates = new ConcurrentBag<CandleUpdateResult>();
+            var midPriceQuote = _midPriceQuoteGenerator.TryGenerate(
+                mtQuote.AssetPair,
+                mtQuote.Ask,
+                mtQuote.Bid,
+                mtQuote.Timestamp,
+                assetPair.Accuracy);
+
+            try
+            {
+                // Updates all intervals in parallel
+
+                var processingTasks = _intervals
+                    .Select(timeInterval => Task.Factory.StartNew(() =>
+                    {
+                        ProcessQuoteInterval(
+                            mtQuote.AssetPair,
+                            mtQuote.Timestamp,
+                            mtQuote.Ask,
+                            false,
+                            timeInterval,
+                            midPriceQuote,
+                            changedUpdates);
+                    }))
+                    .Concat(_intervals
+                        .Select(timeInterval => Task.Factory.StartNew(() =>
+                        {
+                            ProcessQuoteInterval(
+                                mtQuote.AssetPair,
+                                mtQuote.Timestamp,
+                                mtQuote.Bid,
+                                true,
+                                timeInterval,
+                                midPriceQuote,
+                                changedUpdates);
+                        })));
+
+                await Task.WhenAll(processingTasks);
+
+                // Publishes updated candles
+
+                if (!changedUpdates.IsEmpty)
+                {
+                    await _publisher.PublishAsync(changedUpdates);
+                }
+            }
+            catch (Exception)
+            {
+                // Failed to publish one or several candles, so processing should be cancelled
+
+                foreach (var updateResult in changedUpdates)
+                {
+                    _candlesGenerator.Undo(updateResult);
+                }
+
+                throw;
+            }
+        }
+        
+        public async Task ProcessSpotQuoteAsync(QuoteMessage quote)
         {
             var assetPair = await _assetPairsManager.TryGetEnabledPairAsync(quote.AssetPair);
 

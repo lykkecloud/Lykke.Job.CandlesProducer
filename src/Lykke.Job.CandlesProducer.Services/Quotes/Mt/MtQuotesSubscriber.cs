@@ -7,11 +7,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Common;
 using Common.Log;
+using Lykke.Job.CandlesProducer.Core.Domain.Quotes;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Quotes;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages;
-using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 {
@@ -57,40 +57,14 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 
                     return;
                 }
-
-                if (quote.Bid > 0)
+                
+                await _candlesManager.ProcessMtQuoteAsync(new MtQuoteDto
                 {
-                    var bidQuote = new QuoteMessage
-                    {
-                        AssetPair = quote.Instrument,
-                        IsBuy = true,
-                        Price = quote.Bid,
-                        Timestamp = quote.Date
-                    };
-
-                    await _candlesManager.ProcessQuoteAsync(bidQuote);
-                }
-                else
-                {
-                    await _log.WriteWarningAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "bid quote is skipped due to not positive price");
-                }
-
-                if (quote.Ask > 0)
-                {
-                    var askQuote = new QuoteMessage
-                    {
-                        AssetPair = quote.Instrument,
-                        IsBuy = false,
-                        Price = quote.Ask,
-                        Timestamp = quote.Date
-                    };
-
-                    await _candlesManager.ProcessQuoteAsync(askQuote);
-                }
-                else
-                {
-                    await _log.WriteWarningAsync(nameof(MtQuotesSubscriber), nameof(ProcessQuoteAsync), quote.ToJson(), "bid quote is skipped due to not positive price");
-                }
+                    AssetPair = quote.Instrument,
+                    Ask = quote.Ask,
+                    Bid = quote.Bid,
+                    Timestamp = quote.Date
+                });
             }
             catch (Exception)
             {

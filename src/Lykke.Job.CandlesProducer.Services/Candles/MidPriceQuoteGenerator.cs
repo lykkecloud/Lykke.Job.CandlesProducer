@@ -64,9 +64,36 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             return $"Assets count: {state.Count}";
         }
 
-        public QuoteMessage TryGenerate(string assetPair, bool isBuy, double price, DateTime timestamp, int assetPairAccuracy)
+        public QuoteMessage TryGenerate(string assetPair, 
+            double ask, 
+            double bid, 
+            DateTime timestamp,
+            int assetPairAccuracy)
         {
             var assetPairId = assetPair.Trim();
+            
+            if (string.IsNullOrEmpty(assetPairId))
+                throw new ArgumentNullException(nameof(assetPair));
+
+            var newState = new MarketState(
+                new PriceState(ask, timestamp), 
+                new PriceState(bid, timestamp));
+            
+            _assetMarketStates[assetPairId] = newState;
+
+            return TryCreateMidQuote(assetPairId, newState, assetPairAccuracy);
+        }
+
+        public QuoteMessage TryGenerate(string assetPair, 
+            bool isBuy, 
+            double price, 
+            DateTime timestamp, 
+            int assetPairAccuracy)
+        {
+            var assetPairId = assetPair.Trim();
+            
+            if (string.IsNullOrEmpty(assetPairId))
+                throw new ArgumentNullException(nameof(assetPair));
 
             _assetMarketStates.TryGetValue(assetPairId, out var oldState);
 
