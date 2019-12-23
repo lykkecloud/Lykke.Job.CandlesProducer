@@ -24,16 +24,20 @@ using Lykke.Logs.Serilog;
 using Lykke.Logs.Slack;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
+using Lykke.Snow.Common.Startup.Hosting;
+using Lykke.Snow.Common.Startup.Log;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Job.CandlesProducer
 {
     [UsedImplicitly]
     public class Startup
     {
+        private IHostingEnvironment Environment { get; set; }
         private IContainer ApplicationContainer { get; set; }
         private IConfigurationRoot Configuration { get; }
         private ILog Log { get; set; }
@@ -46,6 +50,7 @@ namespace Lykke.Job.CandlesProducer
                 .AddEnvironmentVariables();
 
             Configuration = builder.Build();
+            Environment = env;
         }
 
         [UsedImplicitly]
@@ -74,6 +79,8 @@ namespace Lykke.Job.CandlesProducer
                 Configuration,
                 services,
                 appSettings);
+
+            services.AddSingleton<ILoggerFactory>(x => new WebHostLoggerFactory(Log));
             
             builder.RegisterModule(new JobModule(
                 jobSettings.CurrentValue, 
@@ -127,6 +134,8 @@ namespace Lykke.Job.CandlesProducer
                 var startupManager = ApplicationContainer.Resolve<IStartupManager>();
 
                 await startupManager.StartAsync();
+
+                await Program.Host.WriteLogsAsync(Environment, Log);
 
                 await Log.WriteMonitorAsync("", "", "Started");
             }
