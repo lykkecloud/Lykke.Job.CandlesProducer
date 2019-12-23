@@ -12,6 +12,8 @@ namespace Lykke.Job.CandlesProducer
     [UsedImplicitly]
     class Program
     {
+        internal static IWebHost Host { get; private set; }
+
         public static string EnvInfo => Environment.GetEnvironmentVariable("ENV_INFO");
 
         static void Main(string[] args)
@@ -26,7 +28,7 @@ namespace Lykke.Job.CandlesProducer
 
             try
             {
-                var webHost = new WebHostBuilder()
+                Host = new WebHostBuilder()
                     .UseKestrel()
                     .UseUrls("http://*:5000")
                     .UseContentRoot(Directory.GetCurrentDirectory())
@@ -34,7 +36,7 @@ namespace Lykke.Job.CandlesProducer
                     .UseApplicationInsights()
                     .Build();
 
-                webHost.Run();
+                Host.Run();
             }
             catch (Exception ex)
             {
