@@ -10,6 +10,8 @@ namespace Lykke.Job.CandlesProducer.Core.Services.Candles
 {
     public interface IMidPriceQuoteGenerator : IHaveState<IImmutableDictionary<string, IMarketState>>
     {
+        QuoteMessage TryGenerate(string assetPair, double ask, double bid, DateTime timestamp, int assetPairAccuracy);
+        
         QuoteMessage TryGenerate(string assetPair, bool isBuy, double price, DateTime timestamp, int assetPairAccuracy);
     }
 }
