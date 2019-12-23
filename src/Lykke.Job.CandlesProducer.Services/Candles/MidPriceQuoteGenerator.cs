@@ -91,6 +91,9 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             int assetPairAccuracy)
         {
             var assetPairId = assetPair.Trim();
+            
+            if (string.IsNullOrEmpty(assetPairId))
+                throw new ArgumentNullException(nameof(assetPair));
 
             _assetMarketStates.TryGetValue(assetPairId, out var oldState);
 
