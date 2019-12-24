@@ -87,7 +87,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
                                 mtQuote.Bid,
                                 true,
                                 timeInterval,
-                                midPriceQuote,
+                                null,
                                 changedUpdates);
                         })));
 
