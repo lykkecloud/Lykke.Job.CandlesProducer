@@ -54,7 +54,7 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
                     return;
                 }
 
-                await _candlesManager.ProcessQuoteAsync(quote);
+                await _candlesManager.ProcessSpotQuoteAsync(quote);
             }
             catch (Exception)
             {
