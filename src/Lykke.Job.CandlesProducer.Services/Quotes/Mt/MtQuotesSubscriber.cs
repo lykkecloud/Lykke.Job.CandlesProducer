@@ -11,7 +11,9 @@ using Lykke.Job.CandlesProducer.Core.Domain.Quotes;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.CandlesProducer.Services.Helpers;
 using Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages;
+using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
 {
@@ -35,9 +37,22 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Mt
             _skipEodQuote = skipEodQuote;
         }
 
+        private RabbitMqSubscriptionSettings _subscriptionSettings;
+        public RabbitMqSubscriptionSettings SubscriptionSettings
+        {
+            get
+            {
+                if (_subscriptionSettings == null)
+                {
+                    _subscriptionSettings = RabbitMqSubscriptionSettingsHelper.GetSubscriptionSettings(_connectionString, "lykke.mt", "pricefeed");
+                }
+                return _subscriptionSettings;
+            }
+        }
+
         public void Start()
         {
-            _subscriber = _subscribersFactory.Create<MtQuoteMessage>(_connectionString, "lykke.mt", "pricefeed", ProcessQuoteAsync);
+            _subscriber = _subscribersFactory.Create<MtQuoteMessage>(SubscriptionSettings, ProcessQuoteAsync);
         }
 
         public void Stop()
