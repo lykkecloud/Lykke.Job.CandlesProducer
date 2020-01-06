@@ -11,7 +11,9 @@ using Lykke.Job.CandlesProducer.Core.Domain.Trades;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Trades;
+using Lykke.Job.CandlesProducer.Services.Helpers;
 using Lykke.Job.CandlesProducer.Services.Trades.Mt.Messages;
+using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
 {
@@ -23,12 +25,11 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
         private readonly IRabbitMqSubscribersFactory _subscribersFactory;
         private readonly string _connectionString;
         private readonly bool _isEnabled;
-        private readonly CandleTimeInterval[] _intervals;
         private IStopable _tradesSubscriber;
 
-        public MtTradesSubscriber(ILog log, 
-            ICandlesManager candlesManager, 
-            IRabbitMqSubscribersFactory subscribersFactory, 
+        public MtTradesSubscriber(ILog log,
+            ICandlesManager candlesManager,
+            IRabbitMqSubscribersFactory subscribersFactory,
             string connectionString,
             bool isEnabled)
         {
@@ -39,11 +40,23 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
             _isEnabled = isEnabled;
         }
 
+        private RabbitMqSubscriptionSettings _subscriptionSettings;
+        public RabbitMqSubscriptionSettings SubscriptionSettings
+        {
+            get
+            {
+                if (_subscriptionSettings == null)
+                {
+                    _subscriptionSettings = RabbitMqSubscriptionSettingsHelper.GetSubscriptionSettings(_connectionString, "lykke.mt", "trades", "-v2");
+                }
+                return _subscriptionSettings;
+            }
+        }
+
         public void Start()
         {
             if (_isEnabled)
-                _tradesSubscriber = _subscribersFactory.Create<MtTradeMessage>(_connectionString, "lykke.mt", "trades",
-                    ProcessTradeAsync, "-v2");
+                _tradesSubscriber = _subscribersFactory.Create<MtTradeMessage>(SubscriptionSettings, ProcessTradeAsync);
         }
 
         private async Task ProcessTradeAsync(MtTradeMessage message)
@@ -56,14 +69,14 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Mt
                 return;
             }
 
-            var quotingVolume = (double) (message.Volume * message.Price);
+            var quotingVolume = (double)(message.Volume * message.Price);
 
             var trade = new Trade(
                 message.AssetPairId,
                 message.Date,
-                (double) message.Volume,
+                (double)message.Volume,
                 quotingVolume,
-                (double) message.Price);
+                (double)message.Price);
 
             await _candlesManager.ProcessTradeAsync(trade);
         }

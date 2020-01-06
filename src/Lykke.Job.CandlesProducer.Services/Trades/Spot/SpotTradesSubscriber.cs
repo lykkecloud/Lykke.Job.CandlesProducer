@@ -12,7 +12,9 @@ using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Assets;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Trades;
+using Lykke.Job.CandlesProducer.Services.Helpers;
 using Lykke.Job.CandlesProducer.Services.Trades.Spot.Messages;
+using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
 {
@@ -41,9 +43,22 @@ namespace Lykke.Job.CandlesProducer.Services.Trades.Spot
             _assetPairsManager = assetPairsManager ?? throw new ArgumentNullException(nameof(_assetPairsManager));
         }
 
+        private RabbitMqSubscriptionSettings _subscriptionSettings;
+        public RabbitMqSubscriptionSettings SubscriptionSettings
+        {
+            get
+            {
+                if (_subscriptionSettings == null)
+                {
+                    _subscriptionSettings = RabbitMqSubscriptionSettingsHelper.GetSubscriptionSettings(_tradesSubscriptionSettings.ConnectionString, "lykke", "limitorders.clients", "-v2");
+                }
+                return _subscriptionSettings;
+            }
+        }
+
         public void Start()
         {
-            _limitTradesSubscriber = _subscribersFactory.Create<LimitOrdersMessage>(_tradesSubscriptionSettings.ConnectionString, "lykke", "limitorders.clients", ProcessLimitTradesAsync, "-v2");
+            _limitTradesSubscriber = _subscribersFactory.Create<LimitOrdersMessage>(SubscriptionSettings, ProcessLimitTradesAsync);
         }
 
         private async Task ProcessLimitTradesAsync(LimitOrdersMessage message)

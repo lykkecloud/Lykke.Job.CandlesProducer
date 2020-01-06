@@ -10,7 +10,9 @@ using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Services;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Core.Services.Quotes;
+using Lykke.Job.CandlesProducer.Services.Helpers;
 using Lykke.Job.QuotesProducer.Contract;
+using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
 {
@@ -31,9 +33,22 @@ namespace Lykke.Job.CandlesProducer.Services.Quotes.Spot
             _connectionString = connectionString;
         }
 
+        private RabbitMqSubscriptionSettings _subscriptionSettings;
+        public RabbitMqSubscriptionSettings SubscriptionSettings
+        {
+            get
+            {
+                if (_subscriptionSettings == null)
+                {
+                    _subscriptionSettings = RabbitMqSubscriptionSettingsHelper.GetSubscriptionSettings(_connectionString, "lykke", "quotefeed");
+                }
+                return _subscriptionSettings;
+            }
+        }
+
         public void Start()
         {
-            _subscriber = _subscribersFactory.Create<QuoteMessage>(_connectionString, "lykke", "quotefeed", ProcessQuoteAsync);
+            _subscriber = _subscribersFactory.Create<QuoteMessage>(SubscriptionSettings, ProcessQuoteAsync);
         }
 
         public void Stop()
