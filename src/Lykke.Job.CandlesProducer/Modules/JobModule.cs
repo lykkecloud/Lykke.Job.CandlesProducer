@@ -32,6 +32,11 @@ using Lykke.HttpClientGenerator;
 using Lykke.Job.CandlesProducer.SqlRepositories;
 using Lykke.Service.Assets.Client.Custom;
 using AssetsSettings = Lykke.Job.CandlesProducer.Settings.AssetsSettings;
+using Lykke.Job.CandlesProducer.Services.Trades.Spot.Messages;
+using Lykke.Job.CandlesProducer.Services.Trades.Mt.Messages;
+using Lykke.Job.QuotesProducer.Contract;
+using Lykke.Job.CandlesProducer.Services.Quotes.Mt.Messages;
+using Lykke.Job.CandlesProducer.Services.Trades;
 
 namespace Lykke.Job.CandlesProducer.Modules
 {
@@ -44,7 +49,7 @@ namespace Lykke.Job.CandlesProducer.Modules
         private readonly IServiceCollection _services;
         private readonly QuotesSourceType _quotesSourceType;
 
-        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings, 
+        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings,
             AssetsSettings assetsSettings, QuotesSourceType quotesSourceType, ILog log)
         {
             _settings = settings;
@@ -74,24 +79,24 @@ namespace Lykke.Job.CandlesProducer.Modules
         {
             var monitorSettings = _settings.ResourceMonitor;
 
-            if(monitorSettings != null)
-            switch (monitorSettings.MonitorMode)
-            {
-                case ResourceMonitorMode.Off:
-                    // Do not register any resource monitor.
-                    break;
+            if (monitorSettings != null)
+                switch (monitorSettings.MonitorMode)
+                {
+                    case ResourceMonitorMode.Off:
+                        // Do not register any resource monitor.
+                        break;
 
-                case ResourceMonitorMode.AppInsightsOnly:
-                    builder.RegisterResourcesMonitoring(_log);
-                    break;
+                    case ResourceMonitorMode.AppInsightsOnly:
+                        builder.RegisterResourcesMonitoring(_log);
+                        break;
 
-                case ResourceMonitorMode.AppInsightsWithLog:
-                    builder.RegisterResourcesMonitoringWithLogging(
-                        _log,
-                        monitorSettings.CpuThreshold,
-                        monitorSettings.RamThreshold);
-                    break;
-            }
+                    case ResourceMonitorMode.AppInsightsWithLog:
+                        builder.RegisterResourcesMonitoringWithLogging(
+                            _log,
+                            monitorSettings.CpuThreshold,
+                            monitorSettings.RamThreshold);
+                        break;
+                }
         }
 
         private void RegisterAssetsServices(ContainerBuilder builder)
@@ -144,16 +149,46 @@ namespace Lykke.Job.CandlesProducer.Modules
             // Optionally loading quotes subscriber if it is present in settings...
             if (_settings.Rabbit.QuotesSubscribtion != null)
             {
-                builder.RegisterType(_quotesSourceType == QuotesSourceType.Spot
-                        ? typeof(SpotQuotesSubscriber)
-                        : typeof(MtQuotesSubscriber))
-                    .As<IQuotesSubscriber>()
-                    .SingleInstance()
-                    .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion))
-                    .WithParameter(TypedParameter.From(_settings.SkipEodQuote));
+                if (_quotesSourceType == QuotesSourceType.Spot)
+                {
+                    _services.AddSingleton<IRabbitPoisonHandingService<QuoteMessage>>(provider => new RabbitPoisonHandingService<QuoteMessage>(
+                        provider.GetService<ILog>(),
+                        provider.GetService<IQuotesSubscriber>().SubscriptionSettings));
+
+                    _services.AddSingleton<IQuotesPoisonHandingService>(provider => new QuotesPoisonHandingService<QuoteMessage>(
+                        provider.GetService<IRabbitPoisonHandingService<QuoteMessage>>()));
+
+                    builder.RegisterType<SpotQuotesSubscriber>()
+                        .As<IQuotesSubscriber>()
+                        .SingleInstance()
+                        .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion))
+                        .WithParameter(TypedParameter.From(_settings.SkipEodQuote));
+                }
+                else
+                {
+                    _services.AddSingleton<IRabbitPoisonHandingService<MtQuoteMessage>>(provider => new RabbitPoisonHandingService<MtQuoteMessage>(
+                        provider.GetService<ILog>(),
+                        provider.GetService<IQuotesSubscriber>().SubscriptionSettings));
+
+                    _services.AddSingleton<IQuotesPoisonHandingService>(provider => new QuotesPoisonHandingService<MtQuoteMessage>(
+                        provider.GetService<IRabbitPoisonHandingService<MtQuoteMessage>>()));
+
+                    builder.RegisterType<MtQuotesSubscriber>()
+                        .As<IQuotesSubscriber>()
+                        .SingleInstance()
+                        .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesSubscribtion))
+                        .WithParameter(TypedParameter.From(_settings.SkipEodQuote));
+                }
             }
             else
             {
+                _services.AddSingleton<IRabbitPoisonHandingService<EmptyQuote>>(provider => new RabbitPoisonHandingService<EmptyQuote>(
+                       provider.GetService<ILog>(),
+                       provider.GetService<IQuotesSubscriber>().SubscriptionSettings));
+
+                _services.AddSingleton<IQuotesPoisonHandingService>(provider => new QuotesPoisonHandingService<EmptyQuote>(
+                    provider.GetService<IRabbitPoisonHandingService<EmptyQuote>>()));
+
                 builder.RegisterType<EmptyQuotesSubscriber>()
                     .As<IQuotesSubscriber>()
                     .SingleInstance();
@@ -161,6 +196,13 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             if (_quotesSourceType == QuotesSourceType.Spot)
             {
+                _services.AddSingleton<IRabbitPoisonHandingService<LimitOrdersMessage>>(provider => new RabbitPoisonHandingService<LimitOrdersMessage>(
+                    provider.GetService<ILog>(),
+                    provider.GetService<ITradesSubscriber>().SubscriptionSettings));
+
+                _services.AddSingleton<ITradesPoisonHandingService>(provider => new TradesPoisonHandingService<LimitOrdersMessage>(
+                    provider.GetService<IRabbitPoisonHandingService<LimitOrdersMessage>>()));
+
                 builder.RegisterType<SpotTradesSubscriber>()
                     .As<ITradesSubscriber>()
                     .SingleInstance()
@@ -168,6 +210,13 @@ namespace Lykke.Job.CandlesProducer.Modules
             }
             else
             {
+                _services.AddSingleton<IRabbitPoisonHandingService<MtTradeMessage>>(provider => new RabbitPoisonHandingService<MtTradeMessage>(
+                    provider.GetService<ILog>(),
+                    provider.GetService<ITradesSubscriber>().SubscriptionSettings));
+
+                _services.AddSingleton<ITradesPoisonHandingService>(provider => new TradesPoisonHandingService<MtTradeMessage>(
+                    provider.GetService<IRabbitPoisonHandingService<MtTradeMessage>>()));
+
                 builder.RegisterType<MtTradesSubscriber>()
                     .As<ITradesSubscriber>()
                     .SingleInstance()
@@ -239,7 +288,7 @@ namespace Lykke.Job.CandlesProducer.Modules
                     .PreserveExistingDefaults();
             }
 
-         
+
         }
     }
 }
