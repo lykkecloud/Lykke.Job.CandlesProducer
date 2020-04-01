@@ -4,19 +4,21 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Autofac.Extensions.DependencyInjection;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace Lykke.Job.CandlesProducer
 {
     [UsedImplicitly]
     class Program
     {
-        internal static IWebHost Host { get; private set; }
+        internal static IHost AppHost { get; private set; }
 
         public static string EnvInfo => Environment.GetEnvironmentVariable("ENV_INFO");
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.WriteLine($"CandlesProducer version {Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion}");
 #if DEBUG
@@ -28,15 +30,21 @@ namespace Lykke.Job.CandlesProducer
 
             try
             {
-                Host = new WebHostBuilder()
-                    .UseKestrel()
-                    .UseUrls("http://*:5000")
-                    .UseContentRoot(Directory.GetCurrentDirectory())
-                    .UseStartup<Startup>()
-                    .UseApplicationInsights()
+                AppHost = Host.CreateDefaultBuilder()
+                    .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                    .ConfigureWebHostDefaults(webBuilder =>
+                    {
+                        webBuilder.ConfigureKestrel(serverOptions =>
+                            {
+                                // Set properties and call methods on options
+                            })
+                            .UseUrls("http://*:5000")
+                            .UseContentRoot(Directory.GetCurrentDirectory())
+                            .UseStartup<Startup>();
+                    })
                     .Build();
 
-                Host.Run();
+                await AppHost.RunAsync();
             }
             catch (Exception ex)
             {
@@ -49,13 +57,12 @@ namespace Lykke.Job.CandlesProducer
                 Console.WriteLine();
                 Console.WriteLine($"Process will be terminated in {delay}. Press any key to terminate immediately.");
                 
-                Task.WhenAny(
+                await Task.WhenAny(
                     Task.Delay(delay),
                     Task.Run(() =>
                     {
                         Console.ReadKey(true);
-                    }))
-                .Wait();
+                    }));
             }
 
             Console.WriteLine("Terminated");
