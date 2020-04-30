@@ -2,6 +2,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -31,14 +32,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 
 namespace Lykke.Job.CandlesProducer
 {
     [UsedImplicitly]
     public class Startup
     {
+        private IReloadingManager<AppSettings> _mtSettingsManager;
         private IHostingEnvironment Environment { get; set; }
-        private IContainer ApplicationContainer { get; set; }
+        private ILifetimeScope ApplicationContainer { get; set; }
         private IConfigurationRoot Configuration { get; }
         private ILog Log { get; set; }
 
@@ -54,10 +57,11 @@ namespace Lykke.Job.CandlesProducer
         }
 
         [UsedImplicitly]
-        public IServiceProvider ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc()
-                .AddJsonOptions(options =>
+            services
+                .AddControllers()
+                .AddNewtonsoftJson(options =>
                 {
                     options.SerializerSettings.ContractResolver =
                         new Newtonsoft.Json.Serialization.DefaultContractResolver();
@@ -67,42 +71,46 @@ namespace Lykke.Job.CandlesProducer
             {
                 options.DefaultLykkeConfiguration("v1", "CandlesProducer API");
             });
-
-            var builder = new ContainerBuilder();
-            var appSettings = Configuration.LoadSettings<AppSettings>();
-            var quotesSourceType = appSettings.CurrentValue.CandlesProducerJob != null ? QuotesSourceType.Spot : QuotesSourceType.Mt;
-            var jobSettings = quotesSourceType == QuotesSourceType.Spot 
-                ? appSettings.Nested(x => x.CandlesProducerJob) 
-                : appSettings.Nested(x => x.MtCandlesProducerJob);
-
+            
+            _mtSettingsManager = Configuration.LoadSettings<AppSettings>();
+            
             Log = CreateLogWithSlack(
                 Configuration,
                 services,
-                appSettings);
+                _mtSettingsManager);
 
             services.AddSingleton<ILoggerFactory>(x => new WebHostLoggerFactory(Log));
+                
+            services.AddApplicationInsightsTelemetry();
+        }
+
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+            var quotesSourceType = _mtSettingsManager.CurrentValue.CandlesProducerJob != null
+                ? QuotesSourceType.Spot
+                : QuotesSourceType.Mt;
+            
+            var jobSettings = quotesSourceType == QuotesSourceType.Spot 
+                ? _mtSettingsManager.Nested(x => x.CandlesProducerJob) 
+                : _mtSettingsManager.Nested(x => x.MtCandlesProducerJob);
             
             builder.RegisterModule(new JobModule(
                 jobSettings.CurrentValue, 
                 jobSettings.Nested(x => x.Db), 
-                appSettings.CurrentValue.Assets,
+                _mtSettingsManager.CurrentValue.Assets,
                 quotesSourceType, Log));
 
             if (quotesSourceType == QuotesSourceType.Mt)
             {
                 builder.RegisterBuildCallback(c => c.Resolve<MtAssetPairsManager>());
             }
-
-            builder.Populate(services);
-
-            ApplicationContainer = builder.Build();
-
-            return new AutofacServiceProvider(ApplicationContainer);
         }
 
         [UsedImplicitly]
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime appLifetime)
         {
+            ApplicationContainer = app.ApplicationServices.GetAutofacRoot();
+            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -110,14 +118,24 @@ namespace Lykke.Job.CandlesProducer
 
             app.UseLykkeMiddleware("CandlesProducer", ex => new ErrorResponse { ErrorMessage = "Technical problem" });
 
-            app.UseMvc();
+            app.UseRouting();
+            app.UseEndpoints(endpoints => {
+                endpoints.MapControllers();
+            });
             app.UseSwagger(c =>
             {
-                c.PreSerializeFilters.Add((swagger, httpReq) => swagger.Host = httpReq.Host.Value);
+                c.PreSerializeFilters.Add((swagger, httpReq) => 
+                    swagger.Servers =
+                        new List<OpenApiServer>
+                        {
+                            new OpenApiServer
+                            {
+                                Url = $"{httpReq.Scheme}://{httpReq.Host.Value}"
+                            }
+                        });
             });
             app.UseSwaggerUI(x =>
             {
-                x.RoutePrefix = "swagger/ui";
                 x.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
             });
             app.UseStaticFiles();
@@ -135,7 +153,7 @@ namespace Lykke.Job.CandlesProducer
 
                 await startupManager.StartAsync();
 
-                await Program.Host.WriteLogsAsync(Environment, Log);
+                Program.AppHost.WriteLogs(Environment, Log);
 
                 await Log.WriteMonitorAsync("", "", "Started");
             }
