@@ -6,11 +6,13 @@ using Lykke.SettingsReader.Attributes;
 
 namespace Lykke.Job.CandlesProducer.Settings
 {
-    public class CandlesPublicationRabbitSettings : IRabbitPublicationSettings
+    public class CandlesPublicationRabbitSettings
     {
         [AmqpCheck]
         public string ConnectionString { get; set; }
         public string Namespace { get; set; }
+        [Optional]
+        public CandlesShardingSettings CandlesSharding { get; set; }
     }
 }
 
