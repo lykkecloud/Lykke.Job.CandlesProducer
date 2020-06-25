@@ -18,21 +18,24 @@ namespace Lykke.Job.CandlesProducer.Services
     {
         private readonly IQuotesSubscriber _quotesSubscriber;
         private readonly ITradesSubscriber _tradesSubscriber;
-        private readonly ICandlesPublisher _candlesPublisher;
+        private readonly IEnumerable<ICandlesPublisher> _candlesPublishers;
         private readonly IEnumerable<ISnapshotSerializer> _snapshotSerializers;
+        private readonly IDefaultCandlesPublisher _defaultCandlesPublisher;
         private readonly ILog _log;
 
         public StartupManager(
             IQuotesSubscriber quotesSubscriber,
             ITradesSubscriber tradesSubscriber,
-            ICandlesPublisher candlesPublisher,
             IEnumerable<ISnapshotSerializer> snapshotSerializers,
+            IEnumerable<ICandlesPublisher> candlesPublishers,
+            IDefaultCandlesPublisher defaultCandlesPublisher,
             ILog log)
         {
             _quotesSubscriber = quotesSubscriber;
             _tradesSubscriber = tradesSubscriber;
-            _candlesPublisher = candlesPublisher;
+            _candlesPublishers = candlesPublishers;
             _snapshotSerializers = snapshotSerializers;
+            _defaultCandlesPublisher = defaultCandlesPublisher;
             _log = log;
         }
 
@@ -42,10 +45,15 @@ namespace Lykke.Job.CandlesProducer.Services
 
             var snapshotTasks = _snapshotSerializers.Select(s => s.DeserializeAsync()).ToArray();
 
-            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Starting candles publisher...");
+            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Starting candles publishers...");
+            
+            _defaultCandlesPublisher.Start();
 
-            _candlesPublisher.Start();
-
+            foreach (var candlesPublisher in _candlesPublishers)
+            {
+                candlesPublisher.Start();
+            }
+            
             await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Waiting for snapshots async...");
 
             await Task.WhenAll(snapshotTasks);

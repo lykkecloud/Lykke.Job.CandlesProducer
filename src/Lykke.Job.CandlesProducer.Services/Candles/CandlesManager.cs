@@ -22,7 +22,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         private readonly IMidPriceQuoteGenerator _midPriceQuoteGenerator;
         private readonly IAssetPairsManager _assetPairsManager;
         private readonly ICandlesGenerator _candlesGenerator;
-        private readonly ICandlesPublisher _publisher;
+        private readonly ICandlesPublisherProvider _candlesPublisherProvider;
         private readonly CandleTimeInterval[] _intervals;
         private readonly bool _generateBidAndAsk;
 
@@ -30,16 +30,16 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             IMidPriceQuoteGenerator midPriceQuoteGenerator,
             IAssetPairsManager assetPairsManager,
             ICandlesGenerator candlesGenerator,
-            ICandlesPublisher publisher,
             CandleTimeInterval[] intervals,
-            bool generateBidAndAsk)
+            bool generateBidAndAsk, 
+            ICandlesPublisherProvider candlesPublisherProvider)
         {
             _midPriceQuoteGenerator = midPriceQuoteGenerator;
             _assetPairsManager = assetPairsManager;
             _candlesGenerator = candlesGenerator;
-            _publisher = publisher;
             _intervals = intervals;
             _generateBidAndAsk = generateBidAndAsk;
+            _candlesPublisherProvider = candlesPublisherProvider;
         }
 
         public async Task ProcessMtQuoteAsync(MtQuoteDto mtQuote)
@@ -97,7 +97,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _publisher.PublishAsync(changedUpdates);
+                    await _candlesPublisherProvider.GetForAssetPair(assetPair.Id).PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)
@@ -153,7 +153,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _publisher.PublishAsync(changedUpdates);
+                    await _candlesPublisherProvider.GetForAssetPair(assetPair.Id).PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)
@@ -196,7 +196,7 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _publisher.PublishAsync(changedUpdates);
+                    await _candlesPublisherProvider.GetForAssetPair(trade.AssetPair).PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)

@@ -84,6 +84,7 @@ namespace Lykke.Job.CandlesProducer
             services.AddApplicationInsightsTelemetry();
         }
 
+        [UsedImplicitly]
         public void ConfigureContainer(ContainerBuilder builder)
         {
             var quotesSourceType = _mtSettingsManager.CurrentValue.CandlesProducerJob != null
@@ -98,7 +99,10 @@ namespace Lykke.Job.CandlesProducer
                 jobSettings.CurrentValue, 
                 jobSettings.Nested(x => x.Db), 
                 _mtSettingsManager.CurrentValue.Assets,
-                quotesSourceType, Log));
+                quotesSourceType, 
+                Log));
+
+            builder.RegisterModule(new CandlePublishersModule(jobSettings.CurrentValue.Rabbit.CandlesPublication));
 
             if (quotesSourceType == QuotesSourceType.Mt)
             {
