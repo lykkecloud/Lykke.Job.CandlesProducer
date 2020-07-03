@@ -257,7 +257,6 @@ namespace Lykke.Job.CandlesProducer.Modules
                         new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SnapshotsConnectionString))
                     .SingleInstance();
 
-
                 builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
                     .As<ISnapshotSerializer>();
 
