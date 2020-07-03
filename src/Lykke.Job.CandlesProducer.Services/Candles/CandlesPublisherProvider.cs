@@ -2,6 +2,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
@@ -12,7 +13,10 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     {
         private readonly IEnumerable<ICandlesPublisher> _publishers;
         private readonly IDefaultCandlesPublisher _defaultPublisher;
-        
+
+        private readonly ConcurrentDictionary<string, ICandlesPublisher> _assetToPublisherMap =
+            new ConcurrentDictionary<string, ICandlesPublisher>();
+
         public CandlesPublisherProvider(IEnumerable<ICandlesPublisher> publishers, IDefaultCandlesPublisher defaultPublisher)
         {
             _publishers = publishers ?? throw new ArgumentNullException(nameof(publishers));
@@ -21,14 +25,20 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
             
         public ICandlesPublisher GetForAssetPair(string assetPair)
         {
-            var matchedPublishers = _publishers
-                .Where(p => p.CanPublish(assetPair))
-                .ToList();
+            var publisher = _assetToPublisherMap.GetValueOrDefault(assetPair);
 
-            if (matchedPublishers.Count == 1)
-                return matchedPublishers.Single();
-            
-            return _defaultPublisher;
+            if (publisher == null)
+            {
+                var matchedPublishers = _publishers
+                    .Where(p => p.CanPublish(assetPair))
+                    .ToList();
+
+                publisher = matchedPublishers.Count == 1 ? matchedPublishers.Single() : _defaultPublisher;
+
+                _assetToPublisherMap.TryAdd(assetPair, publisher);
+            }
+
+            return publisher;
         }
     }
 }
