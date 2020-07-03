@@ -2,7 +2,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Linq;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -10,6 +9,7 @@ using Lykke.Job.CandlesProducer.Core.Services.Candles;
 using Lykke.Job.CandlesProducer.Services;
 using Lykke.Job.CandlesProducer.Services.Candles;
 using Lykke.Job.CandlesProducer.Settings;
+using MarginTrading.SettingsService.Contracts.Candles;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lykke.Job.CandlesProducer.Modules
@@ -17,39 +17,37 @@ namespace Lykke.Job.CandlesProducer.Modules
     public class CandlePublishersModule : Module
     {
         private readonly CandlesPublicationRabbitSettings _candlesPublicationRabbitSettings;
+        private readonly CandlesProducerSettingsContract _candlesProducerSettings;
         private readonly IServiceCollection _services;
         
         private const string DefaultShardName = "default";
 
-        public CandlePublishersModule(CandlesPublicationRabbitSettings candlesPublicationRabbitSettings)
+        public CandlePublishersModule(
+            CandlesPublicationRabbitSettings candlesPublicationRabbitSettings, 
+            CandlesProducerSettingsContract candlesProducerSettings)
         {
             _candlesPublicationRabbitSettings = candlesPublicationRabbitSettings;
+            _candlesProducerSettings = candlesProducerSettings;
             _services = new ServiceCollection();
         }
-        
+
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterType<RabbitMqPublishersFactory>()
                 .As<IRabbitMqPublishersFactory>();
-            
-            var defaultShardName =
-                _candlesPublicationRabbitSettings.CandlesSharding?.DefaultShardName ?? DefaultShardName;
 
             builder.RegisterType<DefaultCandlesPublisher>()
                 .As<IDefaultCandlesPublisher>()
                 .SingleInstance()
                 .WithParameter("connectionString", _candlesPublicationRabbitSettings.ConnectionString)
                 .WithParameter("nspace", _candlesPublicationRabbitSettings.Namespace)
-                .WithParameter("shardName", defaultShardName);
+                .WithParameter("shardName", _candlesProducerSettings.DefaultShardName);
 
-            var shards = _candlesPublicationRabbitSettings.CandlesSharding?.Shards ??
-                         Enumerable.Empty<CandlesPublicationShard>();
-            
-            foreach (var shard in shards)
+            foreach (var shard in _candlesProducerSettings.Shards)
             {
-                if (shard.Name == defaultShardName)
+                if (shard.Name == _candlesProducerSettings.DefaultShardName)
                     throw new InvalidOperationException(
-                        $"The shard name [{defaultShardName}] can't be used since it is already in use by default candles publisher. Please rename.");
+                        $"The shard name [{_candlesProducerSettings.DefaultShardName}] can't be used since it is already in use by default candles publisher. Please rename.");
 
                 builder.RegisterType<CandlesPublisher>()
                     .As<ICandlesPublisher>()

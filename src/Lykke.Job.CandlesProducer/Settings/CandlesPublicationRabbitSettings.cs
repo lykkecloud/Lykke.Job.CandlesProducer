@@ -11,8 +11,6 @@ namespace Lykke.Job.CandlesProducer.Settings
         [AmqpCheck]
         public string ConnectionString { get; set; }
         public string Namespace { get; set; }
-        [Optional]
-        public CandlesShardingSettings CandlesSharding { get; set; }
     }
 }
 
