@@ -97,7 +97,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _candlesPublisherProvider.GetForAssetPair(assetPair.Id).PublishAsync(changedUpdates);
+                    var publisher = await _candlesPublisherProvider.GetForAssetPair(assetPair.Id);
+                    await publisher.PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)
@@ -153,7 +154,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _candlesPublisherProvider.GetForAssetPair(assetPair.Id).PublishAsync(changedUpdates);
+                    var publisher = await _candlesPublisherProvider.GetForAssetPair(assetPair.Id);
+                    await publisher.PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)
@@ -196,7 +198,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
 
                 if (!changedUpdates.IsEmpty)
                 {
-                    await _candlesPublisherProvider.GetForAssetPair(trade.AssetPair).PublishAsync(changedUpdates);
+                    var publisher = await _candlesPublisherProvider.GetForAssetPair(trade.AssetPair);
+                    await publisher.PublishAsync(changedUpdates);
                 }
             }
             catch (Exception)
