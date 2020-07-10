@@ -26,6 +26,8 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
         private readonly string _shardName;
         private readonly string _shardPattern;
 
+        public string ShardName => _shardName;
+
         public CandlesPublisher(IRabbitMqPublishersFactory publishersFactory, string connectionString, string nspace, string shardName, string shardPattern)
         {
             _publishersFactory = publishersFactory ?? throw new ArgumentNullException(nameof(publishersFactory));

@@ -20,8 +20,6 @@ namespace Lykke.Job.CandlesProducer.Modules
         private readonly CandlesProducerSettingsContract _candlesProducerSettings;
         private readonly IServiceCollection _services;
         
-        private const string DefaultShardName = "default";
-
         public CandlePublishersModule(
             CandlesPublicationRabbitSettings candlesPublicationRabbitSettings, 
             CandlesProducerSettingsContract candlesProducerSettings)

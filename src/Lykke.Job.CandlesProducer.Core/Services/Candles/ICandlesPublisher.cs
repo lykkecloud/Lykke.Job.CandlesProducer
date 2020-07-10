@@ -11,8 +11,8 @@ namespace Lykke.Job.CandlesProducer.Core.Services.Candles
 {
     public interface ICandlesPublisher : IStartable, IStopable
     {
+        string ShardName { get; }
         Task PublishAsync(IReadOnlyCollection<CandleUpdateResult> updates);
-
         bool CanPublish(string assetPairId);
     }
 }
