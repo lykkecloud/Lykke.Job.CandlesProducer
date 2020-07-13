@@ -6,9 +6,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Core.Services.Candles;
-using MongoDB.Bson;
 
 namespace Lykke.Job.CandlesProducer.Services.Candles
 {
