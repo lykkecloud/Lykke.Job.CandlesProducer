@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Lykke.Job.CandlesProducer.Contract;
@@ -17,29 +18,45 @@ namespace Lykke.Job.CandlesProducer.Services.Candles
     [UsedImplicitly]
     public class CandlesPublisher : ICandlesPublisher
     {
-        private readonly IRabbitMqPublishersFactory _publishersFactory;
-        private readonly IRabbitPublicationSettings _settings;
-
         private RabbitMqPublisher<CandlesUpdatedEvent> _publisher;
+        
+        private readonly IRabbitMqPublishersFactory _publishersFactory;
+        private readonly string _connectionString;
+        private readonly string _namespace;
+        private readonly string _shardName;
+        private readonly string _shardPattern;
 
-        public CandlesPublisher(IRabbitMqPublishersFactory publishersFactory, IRabbitPublicationSettings settings)
+        public string ShardName => _shardName;
+
+        public CandlesPublisher(IRabbitMqPublishersFactory publishersFactory, string connectionString, string nspace, string shardName, string shardPattern)
         {
-            _publishersFactory = publishersFactory;
-            _settings = settings;
+            _publishersFactory = publishersFactory ?? throw new ArgumentNullException(nameof(publishersFactory));
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            _namespace = nspace ?? throw new ArgumentNullException(nameof(nspace));
+            _shardName = shardName ?? throw new ArgumentNullException(nameof(shardName));
+            _shardPattern = shardPattern;
         }
 
         public void Start()
         {
             _publisher = _publishersFactory.Create(
                 new MessagePackMessageSerializer<CandlesUpdatedEvent>(),
-                _settings.ConnectionString,
-                _settings.Namespace,
-                "candles-v2");
+                _connectionString,
+                _namespace,
+                $"candles-v2.{_shardName}");
         }
 
         public Task PublishAsync(IReadOnlyCollection<CandleUpdateResult> updates)
         {
             return PublishV2Async(updates);
+        }
+
+        public virtual bool CanPublish(string assetPairId)
+        {
+            return Regex.IsMatch(
+                assetPairId, 
+                _shardPattern, 
+                RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
         }
 
         private Task PublishV2Async(IEnumerable<CandleUpdateResult> updates)

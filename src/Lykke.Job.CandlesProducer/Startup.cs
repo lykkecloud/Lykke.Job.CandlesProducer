@@ -11,6 +11,7 @@ using Common.Log;
 using JetBrains.Annotations;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
+using Lykke.HttpClientGenerator.Infrastructure;
 using Lykke.Job.CandlesProducer.Core.Domain;
 using Lykke.Job.CandlesProducer.Core.Domain.Candles;
 using Lykke.Job.CandlesProducer.Core.Services;
@@ -27,6 +28,8 @@ using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Lykke.Snow.Common.Startup.Hosting;
 using Lykke.Snow.Common.Startup.Log;
+using MarginTrading.SettingsService.Contracts;
+using MarginTrading.SettingsService.Contracts.Candles;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +43,8 @@ namespace Lykke.Job.CandlesProducer
     public class Startup
     {
         private IReloadingManager<AppSettings> _mtSettingsManager;
+        
+        private CandlesProducerSettingsContract _candlesProducerSettings;
         private IHostingEnvironment Environment { get; set; }
         private ILifetimeScope ApplicationContainer { get; set; }
         private IConfigurationRoot Configuration { get; }
@@ -72,7 +77,7 @@ namespace Lykke.Job.CandlesProducer
                 options.DefaultLykkeConfiguration("v1", "CandlesProducer API");
             });
             
-            _mtSettingsManager = Configuration.LoadSettings<AppSettings>();
+            LoadConfiguration();
             
             Log = CreateLogWithSlack(
                 Configuration,
@@ -80,10 +85,32 @@ namespace Lykke.Job.CandlesProducer
                 _mtSettingsManager);
 
             services.AddSingleton<ILoggerFactory>(x => new WebHostLoggerFactory(Log));
-                
+
             services.AddApplicationInsightsTelemetry();
         }
 
+        private void LoadConfiguration()
+        {
+            // load service settings
+            _mtSettingsManager = Configuration.LoadSettings<AppSettings>();
+
+            // load candles sharding settings from settings service
+            var candlesSettingsClientBuilder = HttpClientGenerator.HttpClientGenerator
+                .BuildForUrl(_mtSettingsManager.CurrentValue.Assets.ServiceUrl)
+                .WithAdditionalCallsWrapper(new ExceptionHandlerCallsWrapper());
+
+            if (!string.IsNullOrWhiteSpace(_mtSettingsManager.CurrentValue.Assets.ApiKey))
+            {
+                candlesSettingsClientBuilder =
+                    candlesSettingsClientBuilder.WithApiKey(_mtSettingsManager.CurrentValue.Assets.ApiKey);
+            }
+
+            var candlesSettingsClient = candlesSettingsClientBuilder.Create().Generate<ICandlesSettingsApi>();
+
+            _candlesProducerSettings = candlesSettingsClient.GetProducerSettingsAsync().GetAwaiter().GetResult();
+        }
+
+        [UsedImplicitly]
         public void ConfigureContainer(ContainerBuilder builder)
         {
             var quotesSourceType = _mtSettingsManager.CurrentValue.CandlesProducerJob != null
@@ -98,7 +125,12 @@ namespace Lykke.Job.CandlesProducer
                 jobSettings.CurrentValue, 
                 jobSettings.Nested(x => x.Db), 
                 _mtSettingsManager.CurrentValue.Assets,
-                quotesSourceType, Log));
+                quotesSourceType, 
+                Log));
+            
+            builder.RegisterModule(new CandlePublishersModule(
+                jobSettings.CurrentValue.Rabbit.CandlesPublication, 
+                _candlesProducerSettings));
 
             if (quotesSourceType == QuotesSourceType.Mt)
             {

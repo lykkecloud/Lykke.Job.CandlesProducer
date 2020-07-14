@@ -49,8 +49,11 @@ namespace Lykke.Job.CandlesProducer.Modules
         private readonly IServiceCollection _services;
         private readonly QuotesSourceType _quotesSourceType;
 
-        public JobModule(CandlesProducerSettings settings, IReloadingManager<DbSettings> dbSettings,
-            AssetsSettings assetsSettings, QuotesSourceType quotesSourceType, ILog log)
+        public JobModule(CandlesProducerSettings settings, 
+            IReloadingManager<DbSettings> dbSettings,
+            AssetsSettings assetsSettings, 
+            QuotesSourceType quotesSourceType, 
+            ILog log)
         {
             _settings = settings;
             _dbSettings = dbSettings;
@@ -69,7 +72,7 @@ namespace Lykke.Job.CandlesProducer.Modules
             RegisterResourceMonitor(builder);
 
             RegisterAssetsServices(builder);
-
+            
             RegisterCandlesServices(builder);
 
             builder.Populate(_services);
@@ -142,9 +145,6 @@ namespace Lykke.Job.CandlesProducer.Modules
 
             builder.RegisterType<RabbitMqSubscribersFactory>()
                 .As<IRabbitMqSubscribersFactory>();
-
-            builder.RegisterType<RabbitMqPublishersFactory>()
-                .As<IRabbitMqPublishersFactory>();
 
             // Optionally loading quotes subscriber if it is present in settings...
             if (_settings.Rabbit.QuotesSubscribtion != null)
@@ -224,11 +224,6 @@ namespace Lykke.Job.CandlesProducer.Modules
                     .WithParameter(TypedParameter.From(_settings.CandlesGenerator.GenerateTrades));
             }
 
-            builder.RegisterType<CandlesPublisher>()
-                .As<ICandlesPublisher>()
-                .SingleInstance()
-                .WithParameter(TypedParameter.From<IRabbitPublicationSettings>(_settings.Rabbit.CandlesPublication));
-
             builder.RegisterType<MidPriceQuoteGenerator>()
                 .As<IMidPriceQuoteGenerator>()
                 .As<IHaveState<IImmutableDictionary<string, IMarketState>>>()
@@ -262,7 +257,6 @@ namespace Lykke.Job.CandlesProducer.Modules
                         new SqlCandlesGeneratorSnapshotRepository(_settings.Db.SnapshotsConnectionString))
                     .SingleInstance();
 
-
                 builder.RegisterType<SnapshotSerializer<ImmutableDictionary<string, ICandle>>>()
                     .As<ISnapshotSerializer>();
 
@@ -287,8 +281,6 @@ namespace Lykke.Job.CandlesProducer.Modules
                     .As<ISnapshotSerializer>()
                     .PreserveExistingDefaults();
             }
-
-
         }
     }
 }

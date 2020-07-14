@@ -6,7 +6,7 @@ using Lykke.SettingsReader.Attributes;
 
 namespace Lykke.Job.CandlesProducer.Settings
 {
-    public class CandlesPublicationRabbitSettings : IRabbitPublicationSettings
+    public class CandlesPublicationRabbitSettings
     {
         [AmqpCheck]
         public string ConnectionString { get; set; }

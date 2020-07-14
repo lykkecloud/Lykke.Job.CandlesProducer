@@ -18,22 +18,25 @@ namespace Lykke.Job.CandlesProducer.Services
     {
         private readonly IQuotesSubscriber _quotesSubscriber;
         private readonly ITradesSubscriber _tradesSubscriber;
-        private readonly ICandlesPublisher _publisher;
         private readonly IEnumerable<ISnapshotSerializer> _snapshotSerializers;
+        private readonly IEnumerable<ICandlesPublisher> _candlesPublishers;
+        private readonly IDefaultCandlesPublisher _defaultCandlesPublisher;
         private readonly ILog _log;
 
         public ShutdownManager(
             IQuotesSubscriber quotesSubscriber,
             ITradesSubscriber tradesSubscriber,
-            ICandlesPublisher publisher,
             IEnumerable<ISnapshotSerializer> snapshotSerializerses,
+            IEnumerable<ICandlesPublisher> candlesPublishers, 
+            IDefaultCandlesPublisher defaultCandlesPublisher,
             ILog log)
         {
             _quotesSubscriber = quotesSubscriber;
             _tradesSubscriber = tradesSubscriber;
-            _publisher = publisher;
             _snapshotSerializers = snapshotSerializerses;
             _log = log;
+            _candlesPublishers = candlesPublishers;
+            _defaultCandlesPublisher = defaultCandlesPublisher;
         }
 
         public async Task ShutdownAsync()
@@ -50,9 +53,14 @@ namespace Lykke.Job.CandlesProducer.Services
             
             var snapshotSrializationTasks = _snapshotSerializers.Select(s  => s.SerializeAsync());
 
-            await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping candles publisher...");
+            await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Stopping candles publishers...");
 
-            _publisher.Stop();
+            _defaultCandlesPublisher.Stop();
+            
+            foreach (var candlesPublisher in _candlesPublishers)
+            {
+                candlesPublisher.Stop();
+            }
 
             await _log.WriteInfoAsync(nameof(ShutdownManager), nameof(ShutdownAsync), "", "Awaiting for snapshots serialization...");
 
